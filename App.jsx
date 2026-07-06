@@ -761,7 +761,7 @@ export default function App() {
           <p className="text-xs" style={{ color: salvo ? "#B5A98F" : "#E8C468" }}>{salvo ? "✓ Tudo salvo" : "Salvando…"}</p>
         </div>
         <nav className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
-          {[["produtos", "Produtos e Preços"], ["tempo-real", "Vendas"], ["vendas", "Registros manuais"], ["financeiro", "Financeiro"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["marketplaces", "Marketplaces"], ["ajuda", "Como usar"]].map(([k, l]) => (
+          {[["produtos", "Produtos e Preços"], ["tempo-real", "Vendas"], ["vendas", "Registros manuais"], ["financeiro", "Financeiro"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["rh", "RH"], ["marketplaces", "Marketplaces"], ["ajuda", "Como usar"]].map(([k, l]) => (
             <button key={k} onClick={() => { setTab(k); setProdAberto(null); }}
               className="px-4 py-2.5 text-sm font-medium rounded-t-lg whitespace-nowrap"
               style={tab === k ? { background: "#F5EFE2", color: "#1A1815" } : { color: "#D8CFBC" }}>
@@ -1096,6 +1096,8 @@ export default function App() {
         {tab === "tempo-real" && (
           <VendasTiny produtos={produtos} insumos={insumos} marketplaces={marketplaces} />
         )}
+
+        {tab === "rh" && <RH fabricas={fabricas} setFab={setFab} />}
 
         {/* ============ FINANCEIRO ============ */}
         {tab === "financeiro" && (() => {
@@ -2136,7 +2138,6 @@ function ImportadorTikTok({ produtos, insumos, marketplaces, vendas, onImport, s
 
 
 // ============ EMPRESA (LASER / ROUTER) ============
-// Regra: ROUTER quando o numero inicial do SKU e 2, 7, 9 ou de 25 a 36; senao LASER.
 function empresaDoSku(sku) {
   const m = String(sku || "").match(/^\s*(\d+)/);
   if (!m) return "LASER";
@@ -2145,7 +2146,7 @@ function empresaDoSku(sku) {
   return "LASER";
 }
 
-// ============ VENDAS (Tiny) — com filtros e separacao por empresa ============
+// ============ VENDAS (Tiny) — filtros e empresa ============
 function VendasTiny({ produtos, insumos, marketplaces }) {
   const [vendas, setVendas] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -2165,7 +2166,6 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
     else { setVendas(data || []); setErro(""); }
     setCarregando(false);
   }
-
   useEffect(() => {
     carregar();
     const canal = supabase
@@ -2236,7 +2236,6 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
   const enriquecidas = useMemo(() => vendas.map((v) => ({
     v, c: calc(v), emp: empresaDaVenda(v), grupo: grupoCanal(v.canal),
   })), [vendas, produtos, insumos, marketplaces]);
-
   const canaisPresentes = useMemo(() => Array.from(new Set(enriquecidas.map((x) => x.grupo))), [enriquecidas]);
 
   function matchBusca(v) {
@@ -2249,7 +2248,6 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
         || (prod && String(prod.nome || "").toLowerCase().includes(q));
     });
   }
-
   const linhas = enriquecidas.filter(({ v, emp, grupo }) => {
     if (filtro === "pagos" && !ehPaga(v.situacao)) return false;
     if (empresa !== "todas" && emp !== empresa) return false;
@@ -2259,7 +2257,6 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
     if (!matchBusca(v)) return false;
     return true;
   });
-
   const tot = linhas.reduce((s, { c }) => ({
     receita: s.receita + c.receita, custo: s.custo + c.custo, taxas: s.taxas + c.taxas,
     imposto: s.imposto + c.imposto, lucro: s.lucro + c.lucro,
@@ -2268,7 +2265,6 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
 
   const card = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
   const ctrl = { borderColor: "#E4DCCB", background: "#FFFFFF" };
-
   function limpar() { setEmpresa("todas"); setCanalF("todos"); setBusca(""); setDataIni(""); setDataFim(""); setFiltro("pagos"); }
 
   return (
@@ -2276,15 +2272,10 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
       <div className="flex items-center justify-between mb-3">
         <div>
           <h2 className="text-lg font-semibold" style={{ color: "#1A1815" }}>Vendas</h2>
-          <p className="text-xs" style={{ color: "#948B7C" }}>
-            Vendas vindas do Tiny, em tempo real, com lucro calculado.{" "}
-            {aoVivo ? "🟢 Ao vivo" : "⚪ Conectando..."}
-          </p>
+          <p className="text-xs" style={{ color: "#948B7C" }}>Vendas vindas do Tiny, em tempo real, com lucro calculado.{" "}{aoVivo ? "🟢 Ao vivo" : "⚪ Conectando..."}</p>
         </div>
         <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1A1815", color: "#F5EFE2" }}>Atualizar</button>
       </div>
-
-      {/* filtros */}
       <div className="flex flex-wrap items-end gap-2 mb-4">
         <label className="text-xs" style={{ color: "#6E675C" }}>Empresa
           <select value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
@@ -2293,8 +2284,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
         </label>
         <label className="text-xs" style={{ color: "#6E675C" }}>Marketplace
           <select value={canalF} onChange={(e) => setCanalF(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
-            <option value="todos">Todos</option>
-            {canaisPresentes.map((g) => <option key={g} value={g}>{g}</option>)}
+            <option value="todos">Todos</option>{canaisPresentes.map((g) => <option key={g} value={g}>{g}</option>)}
           </select>
         </label>
         <label className="text-xs" style={{ color: "#6E675C" }}>Situacao
@@ -2313,16 +2303,13 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
         </label>
         <button onClick={limpar} className="px-3 py-2 rounded-lg border text-sm" style={{ color: "#6E675C", borderColor: "#E4DCCB" }}>Limpar</button>
       </div>
-
       {erro && <p className="text-sm mb-3" style={{ color: "#B4462F" }}>Erro: {erro}</p>}
-
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Faturamento</p><p className="text-lg font-semibold">{BRL(tot.receita)}</p></div>
         <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Lucro</p><p className="text-lg font-semibold" style={{ color: tot.lucro >= 0 ? "#2E7D4F" : "#B4462F" }}>{BRL(tot.lucro)}</p></div>
         <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Margem media</p><p className="text-lg font-semibold">{isFinite(margemMedia) ? margemMedia.toFixed(1) + "%" : "—"}</p></div>
         <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>N de vendas</p><p className="text-lg font-semibold">{linhas.length}</p></div>
       </div>
-
       {carregando ? (
         <p className="text-sm" style={{ color: "#948B7C" }}>Carregando vendas...</p>
       ) : linhas.length === 0 ? (
@@ -2332,19 +2319,10 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
           <table className="w-full text-sm">
             <thead>
               <tr style={{ color: "#948B7C", textAlign: "left" }}>
-                <th className="py-2 pr-3">Data</th>
-                <th className="py-2 pr-3">Pedido</th>
-                <th className="py-2 pr-3">Empresa</th>
-                <th className="py-2 pr-3">Canal</th>
-                <th className="py-2 pr-3">Situacao</th>
-                <th className="py-2 pr-3">Cliente</th>
-                <th className="py-2 pr-3 text-right">Itens</th>
-                <th className="py-2 pr-3 text-right">Receita</th>
-                <th className="py-2 pr-3 text-right">Custo</th>
-                <th className="py-2 pr-3 text-right">Taxas</th>
-                <th className="py-2 pr-3 text-right">Imposto</th>
-                <th className="py-2 pr-3 text-right">Lucro</th>
-                <th className="py-2 pr-3 text-right">Margem</th>
+                <th className="py-2 pr-3">Data</th><th className="py-2 pr-3">Pedido</th><th className="py-2 pr-3">Empresa</th>
+                <th className="py-2 pr-3">Canal</th><th className="py-2 pr-3">Situacao</th><th className="py-2 pr-3">Cliente</th>
+                <th className="py-2 pr-3 text-right">Itens</th><th className="py-2 pr-3 text-right">Receita</th><th className="py-2 pr-3 text-right">Custo</th>
+                <th className="py-2 pr-3 text-right">Taxas</th><th className="py-2 pr-3 text-right">Imposto</th><th className="py-2 pr-3 text-right">Lucro</th><th className="py-2 pr-3 text-right">Margem</th>
               </tr>
             </thead>
             <tbody>
@@ -2367,11 +2345,84 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
               ))}
             </tbody>
           </table>
-          <p className="text-[11px] mt-3" style={{ color: "#B5A98F" }}>
-            "Somente pagos" exclui pedidos em aberto, cancelados e incompletos. Empresa vem do produto (regra de SKU, editavel no cadastro). ⚠ = item sem SKU no catalogo.
-          </p>
+          <p className="text-[11px] mt-3" style={{ color: "#B5A98F" }}>"Somente pagos" exclui em aberto/cancelados/incompletos. Empresa vem do produto (regra de SKU, editavel). ⚠ = item sem SKU no catalogo.</p>
         </div>
       )}
+    </div>
+  );
+}
+
+// ============ RH (colaboradores por setor -> alimenta Fabricas) ============
+function RH({ fabricas, setFab }) {
+  const laser = fabricas.find((f) => f.id === "laser");
+  const router = fabricas.find((f) => f.id === "router");
+  const setores = [
+    laser && { key: "laser", nome: "LASER", lista: laser.colaboradores || [], salvar: (l) => setFab("laser", { colaboradores: l }) },
+    router && { key: "router", nome: "ROUTER", lista: router.colaboradores || [], salvar: (l) => setFab("router", { colaboradores: l }) },
+    router && router.montagem && { key: "cilindro", nome: "Montagem (Cilindro)", lista: router.montagem.colaboradores || [], salvar: (l) => setFab("router", { montagem: { ...router.montagem, colaboradores: l } }) },
+  ].filter(Boolean);
+
+  const recalc = (c) => ({ ...c, total: num(c.salario) + num(c.encargos) + num(c.bonus) });
+  const totalGeral = setores.reduce((s, st) => s + st.lista.reduce((a, c) => a + num(c.total), 0), 0);
+  const headcount = setores.reduce((s, st) => s + st.lista.length, 0);
+
+  const card = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
+  const mi = "w-full px-2 py-1 rounded border text-sm";
+  const ms = { borderColor: "#E4DCCB", background: "#FFFFFF" };
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBF6E9", border: "1px solid #E8D9A8", color: "#6B5A1E" }}>
+        Colaboradores por setor. O total de cada setor alimenta automaticamente os custos da aba <strong>Fabricas</strong> (linha "Total Colaboradores" e o custo de montagem). O <strong>Total</strong> de cada pessoa e salario + encargos + bonus.
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Folha total (mes)</p><p className="text-lg font-semibold">{BRL(totalGeral)}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Colaboradores</p><p className="text-lg font-semibold">{headcount}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Setores</p><p className="text-lg font-semibold">{setores.length}</p></div>
+      </div>
+      {setores.map((st) => {
+        const totSetor = st.lista.reduce((a, c) => a + num(c.total), 0);
+        return (
+          <div key={st.key} style={card}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold">{st.nome}</h3>
+              <p className="text-sm" style={{ color: "#6E675C" }}>{st.lista.length} pessoa(s) · <strong>{BRL(totSetor)}</strong>/mes</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" style={{ minWidth: 680 }}>
+                <thead>
+                  <tr style={{ color: "#6E675C", textAlign: "left" }}>
+                    <th className="px-2 py-2">Nome</th><th className="px-2 py-2">Cargo</th>
+                    <th className="px-2 py-2 text-right">Salario</th><th className="px-2 py-2 text-right">Encargos</th>
+                    <th className="px-2 py-2 text-right">Bonus</th><th className="px-2 py-2 text-right">Total</th><th className="px-2 py-2"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {st.lista.map((c) => (
+                    <tr key={c.id} style={{ borderTop: "1px solid #F0EADD" }}>
+                      <td className="px-2 py-1"><input className={mi} style={ms} value={c.nome || ""}
+                        onChange={(e) => st.salvar(st.lista.map((x) => x.id === c.id ? { ...x, nome: e.target.value } : x))} /></td>
+                      <td className="px-2 py-1"><input className={mi} style={ms} value={c.cargo || ""}
+                        onChange={(e) => st.salvar(st.lista.map((x) => x.id === c.id ? { ...x, cargo: e.target.value } : x))} /></td>
+                      {["salario", "encargos", "bonus"].map((campo) => (
+                        <td key={campo} className="px-2 py-1"><input type="number" step="any" className={mi + " text-right"} style={ms} value={c[campo]}
+                          onChange={(e) => st.salvar(st.lista.map((x) => x.id === c.id ? recalc({ ...x, [campo]: e.target.value }) : x))} /></td>
+                      ))}
+                      <td className="px-2 py-1 text-right font-semibold">{BRL(num(c.total))}</td>
+                      <td className="px-2 py-1 text-right"><button className="text-lg" style={{ color: "#A33B2E" }}
+                        onClick={() => st.salvar(st.lista.filter((x) => x.id !== c.id))}>×</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <button className="mt-3 text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1A1815", background: "#EFE8D9" }}
+              onClick={() => st.salvar([...st.lista, { id: uid(), nome: "Novo colaborador", cargo: "", salario: 0, encargos: 0, bonus: 0, total: 0 }])}>
+              + Adicionar colaborador
+            </button>
+          </div>
+        );
+      })}
     </div>
   );
 }
