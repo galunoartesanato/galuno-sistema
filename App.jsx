@@ -613,6 +613,24 @@ export default function App() {
   const [busca, setBusca] = useState("");
   const [erro, setErro] = useState("");
   const [salvo, setSalvo] = useState(true);
+  const [setor, setSetor] = useState(null);
+  useEffect(() => {
+    (async () => {
+      const { data: u } = await supabase.auth.getUser();
+      const email = (u?.user?.email || "").toLowerCase();
+      let sx = email === "gabriel.noris1@gmail.com" ? "dono" : "restrito";
+      if (email) {
+        try {
+          const { data: pf } = await supabase.from("perfis").select("setor").eq("email", email).maybeSingle();
+          if (pf && pf.setor) sx = pf.setor;
+        } catch (_e) { /* tabela pode nao existir ainda */ }
+      }
+      setSetor(sx);
+    })();
+  }, []);
+  useEffect(() => {
+    if (setor && !abasDoSetor(setor).includes(tab)) setTab(abasDoSetor(setor)[0]);
+  }, [setor]);
 
   useEffect(() => {
     (async () => {
@@ -650,6 +668,8 @@ export default function App() {
   // Insumos de produção (corte/montagem) recebem o custo calculado das fábricas automaticamente
   const insumos = aplicarCustosFabrica(data.insumos, fabricas);
   const prod = produtos.find((p) => p.id === prodAberto);
+  const abasVisiveis = abasDoSetor(setor);
+  const soPreco = setor === "vendas";
 
   const setProduto = (id, patch) =>
     setData((d) => ({ ...d, produtos: d.produtos.map((p) => (p.id === id ? { ...p, ...patch } : p)) }));
@@ -761,7 +781,7 @@ export default function App() {
           <p className="text-xs" style={{ color: salvo ? "#B5A98F" : "#E8C468" }}>{salvo ? "✓ Tudo salvo" : "Salvando…"}</p>
         </div>
         <nav className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
-          {[["produtos", "Produtos e Preços"], ["tempo-real", "Vendas"], ["financeiro", "Financeiro"], ["relatorios", "Relatórios"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["rh", "RH"], ["marketplaces", "Marketplaces"], ["ajuda", "Como usar"]].map(([k, l]) => (
+          {[["produtos", "Produtos e Preços"], ["tempo-real", "Vendas"], ["financeiro", "Financeiro"], ["relatorios", "Relatórios"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["rh", "RH"], ["marketplaces", "Marketplaces"], ["usuarios", "Usuários"], ["ajuda", "Como usar"]].filter(([k]) => abasVisiveis.includes(k)).map(([k, l]) => (
             <button key={k} onClick={() => { setTab(k); setProdAberto(null); }}
               className="px-4 py-2.5 text-sm font-medium rounded-t-lg whitespace-nowrap"
               style={tab === k ? { background: "#F5EFE2", color: "#1A1815" } : { color: "#D8CFBC" }}>
@@ -793,7 +813,7 @@ export default function App() {
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
               />
-              <button onClick={novoProduto} className="px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm" style={{ background: "#B4690E" }}>
+              <button disabled={soPreco} onClick={novoProduto} className="px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm" style={{ background: "#B4690E" }}>
                 + Novo produto
               </button>
             </div>
@@ -859,14 +879,14 @@ export default function App() {
                 <div className="flex flex-wrap gap-3 items-end justify-between">
                   <div className="flex flex-wrap gap-3 items-end">
                     <Field label="SKU / Código" w="140px">
-                      <input className={inputCls} style={inputStyle} value={prod.sku || ""} placeholder="Ex.: 2.0"
+                      <input className={inputCls} style={inputStyle} value={prod.sku || ""} placeholder="Ex.: 2.0" disabled={soPreco}
                         onChange={(e) => setProduto(prod.id, { sku: e.target.value })} />
                     </Field>
                     <Field label="Nome do produto" w="min(320px,100%)">
-                      <input className={inputCls} style={inputStyle} value={prod.nome} onChange={(e) => setProduto(prod.id, { nome: e.target.value })} />
+                      <input className={inputCls} style={inputStyle} value={prod.nome} disabled={soPreco} onChange={(e) => setProduto(prod.id, { nome: e.target.value })} />
                     </Field>
                     <Field label="Empresa" w="130px">
-                      <select className={inputCls} style={inputStyle}
+                      <select className={inputCls} style={inputStyle} disabled={soPreco}
                         value={prod.empresa || empresaDoSku(prod.sku)}
                         onChange={(e) => setProduto(prod.id, { empresa: e.target.value })}>
                         <option value="LASER">LASER</option>
@@ -874,7 +894,7 @@ export default function App() {
                       </select>
                     </Field>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2" style={{ display: soPreco ? "none" : "flex" }}>
                     <button onClick={() => duplicarProduto(prod)}
                       className="text-sm px-3 py-2 rounded-lg border" style={{ color: "#4A443A", borderColor: "#D8D0BF" }}>
                       Duplicar
@@ -896,24 +916,24 @@ export default function App() {
                     const sub = ins ? custoUnit(ins) * num(it.qtd) : 0;
                     return (
                       <div key={it.id} className="flex flex-wrap items-center gap-2 rounded-xl px-3 py-2" style={{ background: "#F8F3E9" }}>
-                        <select className={inputCls + " flex-1 min-w-[180px]"} style={inputStyle} value={it.insumoId}
+                        <select className={inputCls + " flex-1 min-w-[180px]"} style={inputStyle} disabled={soPreco} value={it.insumoId}
                           onChange={(e) => setProduto(prod.id, { itens: prod.itens.map((x) => x.id === it.id ? { ...x, insumoId: e.target.value } : x) })}>
                           {insumos.map((i) => <option key={i.id} value={i.id}>{i.codigo} — {i.descricao}</option>)}
                         </select>
                         <div className="flex items-center gap-1">
-                          <input type="number" step="any" className={inputCls + " w-24 text-right"} style={inputStyle} value={it.qtd}
+                          <input type="number" step="any" className={inputCls + " w-24 text-right"} style={inputStyle} disabled={soPreco} value={it.qtd}
                             onChange={(e) => setProduto(prod.id, { itens: prod.itens.map((x) => x.id === it.id ? { ...x, qtd: e.target.value } : x) })} />
                           <span className="text-xs w-8" style={{ color: "#948B7C" }}>{ins?.unidUso}</span>
                         </div>
                         <span className="text-sm font-semibold w-24 text-right">{BRL(sub)}</span>
-                        <button onClick={() => setProduto(prod.id, { itens: prod.itens.filter((x) => x.id !== it.id) })}
+                        <button disabled={soPreco} onClick={() => setProduto(prod.id, { itens: prod.itens.filter((x) => x.id !== it.id) })}
                           className="px-2 text-lg" style={{ color: "#A33B2E" }} aria-label="Remover linha">×</button>
                       </div>
                     );
                   })}
                 </div>
                 <div className="flex items-center justify-between mt-4 flex-wrap gap-3">
-                  <button
+                  <button disabled={soPreco}
                     onClick={() => insumos.length
                       ? setProduto(prod.id, { itens: [...(prod.itens || []), { id: uid(), insumoId: insumos[0].id, qtd: 1 }] })
                       : setErro("Cadastre pelo menos um insumo primeiro (aba Insumos).")}
@@ -924,7 +944,7 @@ export default function App() {
                     {!(prod.itens || []).length && (
                       <label className="flex items-center gap-2 text-xs" style={{ color: "#6E675C" }}>
                         Custo importado da planilha (R$)
-                        <input type="number" step="any" className={inputCls + " w-28 text-right"} style={inputStyle}
+                        <input type="number" step="any" className={inputCls + " w-28 text-right"} style={inputStyle} disabled={soPreco}
                           value={prod.custoManual}
                           onChange={(e) => setProduto(prod.id, { custoManual: e.target.value })} />
                       </label>
@@ -948,7 +968,7 @@ export default function App() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
                   {[["peso", "Peso bruto (kg)"], ["comp", "Comprimento (cm)"], ["larg", "Largura (cm)"], ["alt", "Altura (cm)"]].map(([k, l]) => (
                     <Field key={k} label={l}>
-                      <input type="number" step="any" className={inputCls} style={inputStyle} value={prod[k]}
+                      <input type="number" step="any" className={inputCls} style={inputStyle} value={prod[k]} disabled={soPreco}
                         onChange={(e) => setProduto(prod.id, { [k]: e.target.value })} />
                     </Field>
                   ))}
@@ -1100,6 +1120,8 @@ export default function App() {
         {tab === "rh" && <RH fabricas={fabricas} setFab={setFab} />}
 
         {tab === "relatorios" && <Relatorios produtos={produtos} insumos={insumos} fornecedores={fornecedores} />}
+
+        {tab === "usuarios" && <Usuarios />}
 
         {tab === "clientes" && <Clientes />}
 
@@ -2735,6 +2757,102 @@ function Clientes() {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+
+// ============ CONTROLE DE ACESSO (por setor) ============
+function abasDoSetor(setor) {
+  const TODAS = ["produtos", "tempo-real", "financeiro", "relatorios", "estoque", "insumos", "fornecedores", "fabricas", "rh", "marketplaces", "usuarios", "ajuda"];
+  if (setor === "dono") return TODAS;
+  if (setor === "financeiro") return TODAS.filter((t) => t !== "usuarios");
+  if (setor === "rh") return ["rh", "ajuda"];
+  if (setor === "vendas") return ["produtos", "marketplaces", "ajuda"];
+  return ["ajuda"]; // restrito ou carregando
+}
+
+function Usuarios() {
+  const [lista, setLista] = useState([]);
+  const [email, setEmail] = useState("");
+  const [setor, setSetor] = useState("vendas");
+  const [erro, setErro] = useState("");
+
+  const SETORES = [
+    ["dono", "Dono (tudo + gerenciar usuários)"],
+    ["financeiro", "Financeiro (todas as abas de dados)"],
+    ["rh", "RH (somente aba RH)"],
+    ["vendas", "Vendas (Produtos: só margem/imposto + Marketplaces)"],
+    ["restrito", "Restrito (sem acesso)"],
+  ];
+  const nomeSetor = (s) => (SETORES.find((x) => x[0] === s) || [s, s])[1];
+
+  async function carregar() {
+    const { data, error } = await supabase.from("perfis").select("*").order("email");
+    if (error) setErro(error.message); else { setLista(data || []); setErro(""); }
+  }
+  useEffect(() => { carregar(); }, []);
+
+  async function salvar() {
+    const e = email.trim().toLowerCase();
+    if (!e) return;
+    const { error } = await supabase.from("perfis").upsert({ email: e, setor });
+    if (error) { setErro(error.message); return; }
+    setEmail(""); carregar();
+  }
+  async function alterar(em, novo) { await supabase.from("perfis").update({ setor: novo }).eq("email", em); carregar(); }
+  async function remover(em) { await supabase.from("perfis").delete().eq("email", em); carregar(); }
+
+  const card = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
+  const ctrl = { borderColor: "#E4DCCB", background: "#FFFFFF" };
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBF6E9", border: "1px solid #E8D9A8", color: "#6B5A1E" }}>
+        Defina o setor de cada pessoa. O login em si é criado no Supabase (Authentication); aqui você só liga o <strong>e-mail</strong> ao <strong>setor</strong>, que controla quais abas a pessoa vê. (Trava de interface — organiza acessos do dia a dia.)
+      </div>
+
+      <div style={card}>
+        <p className="text-sm font-semibold mb-3">Adicionar / atualizar acesso</p>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="text-xs flex-1 min-w-[220px]" style={{ color: "#6E675C" }}>E-mail da pessoa
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="pessoa@email.com" className="block w-full px-2 py-2 rounded-lg border text-sm" style={ctrl} />
+          </label>
+          <label className="text-xs" style={{ color: "#6E675C" }}>Setor
+            <select value={setor} onChange={(e) => setSetor(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
+              {SETORES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </label>
+          <button onClick={salvar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1A1815", color: "#F5EFE2" }}>Salvar</button>
+        </div>
+        {erro && <p className="text-sm mt-2" style={{ color: "#B4462F" }}>Erro: {erro}</p>}
+      </div>
+
+      <div className="overflow-x-auto" style={card}>
+        <table className="w-full text-sm">
+          <thead>
+            <tr style={{ color: "#948B7C", textAlign: "left" }}>
+              <th className="py-2 pr-3">E-mail</th><th className="py-2 pr-3">Setor</th><th className="py-2 pr-3"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {lista.map((u) => (
+              <tr key={u.email} style={{ borderTop: "1px solid #F0EADD" }}>
+                <td className="py-2 pr-3">{u.email}</td>
+                <td className="py-2 pr-3">
+                  <select value={u.setor} onChange={(e) => alterar(u.email, e.target.value)} className="px-2 py-1 rounded border text-sm" style={ctrl} title={nomeSetor(u.setor)}>
+                    {SETORES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  </select>
+                </td>
+                <td className="py-2 pr-3 text-right">
+                  <button onClick={() => remover(u.email)} className="text-lg" style={{ color: "#A33B2E" }} title="Remover">×</button>
+                </td>
+              </tr>
+            ))}
+            {!lista.length && <tr><td colSpan={3} className="py-3" style={{ color: "#6E675C" }}>Nenhum acesso definido ainda.</td></tr>}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
