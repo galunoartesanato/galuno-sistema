@@ -761,7 +761,7 @@ export default function App() {
           <p className="text-xs" style={{ color: salvo ? "#B5A98F" : "#E8C468" }}>{salvo ? "✓ Tudo salvo" : "Salvando…"}</p>
         </div>
         <nav className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
-          {[["produtos", "Produtos e Preços"], ["tempo-real", "Vendas"], ["vendas", "Registros manuais"], ["financeiro", "Financeiro"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["rh", "RH"], ["marketplaces", "Marketplaces"], ["ajuda", "Como usar"]].map(([k, l]) => (
+          {[["produtos", "Produtos e Preços"], ["tempo-real", "Vendas"], ["vendas", "Registros manuais"], ["financeiro", "Financeiro"], ["relatorios", "Relatórios"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["rh", "RH"], ["marketplaces", "Marketplaces"], ["ajuda", "Como usar"]].map(([k, l]) => (
             <button key={k} onClick={() => { setTab(k); setProdAberto(null); }}
               className="px-4 py-2.5 text-sm font-medium rounded-t-lg whitespace-nowrap"
               style={tab === k ? { background: "#F5EFE2", color: "#1A1815" } : { color: "#D8CFBC" }}>
@@ -1098,6 +1098,8 @@ export default function App() {
         )}
 
         {tab === "rh" && <RH fabricas={fabricas} setFab={setFab} />}
+
+        {tab === "relatorios" && <Relatorios produtos={produtos} insumos={insumos} fornecedores={fornecedores} />}
 
         {/* ============ FINANCEIRO ============ */}
         {tab === "financeiro" && (() => {
@@ -2423,6 +2425,161 @@ function RH({ fabricas, setFab }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+
+// ============ RELATORIOS (consumo de materia-prima por fornecedor) ============
+function Relatorios({ produtos, insumos, fornecedores }) {
+  const [periodo, setPeriodo] = useState("semana");
+  const [dataIni, setDataIni] = useState("");
+  const [dataFim, setDataFim] = useState("");
+  const [vendas, setVendas] = useState([]);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState("");
+
+  const isoD = (d) => d.toISOString().slice(0, 10);
+  function intervalo() {
+    const hoje = new Date();
+    if (periodo === "mes") {
+      const y = hoje.getFullYear(), m = hoje.getMonth();
+      return { ini: isoD(new Date(y, m - 1, 1)), fim: isoD(new Date(y, m, 0)) };
+    }
+    if (periodo === "custom") return { ini: dataIni, fim: dataFim };
+    return { ini: isoD(new Date(hoje.getTime() - 7 * 86400000)), fim: isoD(hoje) };
+  }
+
+  async function carregar() {
+    setCarregando(true); setErro("");
+    const { ini, fim } = intervalo();
+    let q = supabase.from("vendas").select("*").limit(5000);
+    if (ini) q = q.gte("data_pedido", ini);
+    if (fim) q = q.lte("data_pedido", fim);
+    const { data, error } = await q;
+    if (error) setErro(error.message); else setVendas(data || []);
+    setCarregando(false);
+  }
+  useEffect(() => { carregar(); }, []);
+
+  function ehPaga(sit) {
+    const t = String(sit || "").toLowerCase();
+    return !(t.includes("aberto") || t.includes("cancel") || t.includes("incomplet") || t.includes("nao entregue") || t.includes("não entregue"));
+  }
+
+  const linhas = useMemo(() => {
+    const agg = {};
+    for (const v of vendas) {
+      if (!ehPaga(v.situacao)) continue;
+      for (const it of v.itens || []) {
+        const prod = casarSku(it.sku, produtos);
+        if (!prod || !(prod.itens || []).length) continue;
+        const emp = prod.empresa || empresaDoSku(prod.sku);
+        const vendidas = num(it.quantidade);
+        for (const f of prod.itens) {
+          const ins = insumos.find((i) => i.id === f.insumoId);
+          if (!ins || !ins.fornecedorId) continue;
+          const qty = num(f.qtd) * vendidas;
+          const custo = custoUnit(ins) * qty;
+          const k = emp + "|" + ins.fornecedorId + "|" + ins.id;
+          if (!agg[k]) agg[k] = { empresa: emp, fornecedorId: ins.fornecedorId, ins, qty: 0, custo: 0 };
+          agg[k].qty += qty; agg[k].custo += custo;
+        }
+      }
+    }
+    const fn = (id) => (fornecedores.find((f) => f.id === id) || {}).nome || id;
+    return Object.values(agg).map((a) => ({
+      empresa: a.empresa, fornecedor: fn(a.fornecedorId),
+      codigo: a.ins.codigo || "", insumo: a.ins.descricao || "", unidade: a.ins.unidUso || "",
+      quantidade: a.qty, custo: a.custo,
+    })).sort((x, y) => x.empresa.localeCompare(y.empresa) || x.fornecedor.localeCompare(y.fornecedor) || y.custo - x.custo);
+  }, [vendas, produtos, insumos, fornecedores]);
+
+  const totLaser = linhas.filter((l) => l.empresa === "LASER").reduce((s, l) => s + l.custo, 0);
+  const totRouter = linhas.filter((l) => l.empresa === "ROUTER").reduce((s, l) => s + l.custo, 0);
+
+  async function baixarExcel() {
+    const XLSX = await import("xlsx");
+    const rows = linhas.map((l) => ({
+      Empresa: l.empresa, Fornecedor: l.fornecedor, "Codigo": l.codigo, Insumo: l.insumo,
+      Unidade: l.unidade, Quantidade: Math.round(l.quantidade * 1000) / 1000, "Custo (R$)": Math.round(l.custo * 100) / 100,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Materia-prima");
+    const { ini, fim } = intervalo();
+    XLSX.writeFile(wb, "materia-prima_" + ini + "_a_" + fim + ".xlsx");
+  }
+
+  const card = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
+  const ctrl = { borderColor: "#E4DCCB", background: "#FFFFFF" };
+  const iv = intervalo();
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBF6E9", border: "1px solid #E8D9A8", color: "#6B5A1E" }}>
+        Consumo TEORICO de materia-prima no periodo (explode cada produto vendido na ficha tecnica), por fornecedor e insumo, separado por empresa. Considera apenas pedidos pagos.
+      </div>
+
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-xs" style={{ color: "#6E675C" }}>Periodo
+          <select value={periodo} onChange={(e) => setPeriodo(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
+            <option value="semana">Ultimos 7 dias</option>
+            <option value="mes">Mes anterior (fechado)</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </label>
+        {periodo === "custom" && (
+          <>
+            <label className="text-xs" style={{ color: "#6E675C" }}>De
+              <input type="date" value={dataIni} onChange={(e) => setDataIni(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl} />
+            </label>
+            <label className="text-xs" style={{ color: "#6E675C" }}>Ate
+              <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl} />
+            </label>
+          </>
+        )}
+        <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1A1815", color: "#F5EFE2" }}>Atualizar</button>
+        <button onClick={baixarExcel} disabled={!linhas.length} className="px-3 py-2 rounded-lg border text-sm disabled:opacity-50" style={{ color: "#1A1815", borderColor: "#E4DCCB" }}>Baixar Excel</button>
+        <span className="text-xs" style={{ color: "#948B7C" }}>{iv.ini} a {iv.fim}</span>
+      </div>
+
+      {erro && <p className="text-sm" style={{ color: "#B4462F" }}>Erro: {erro}</p>}
+
+      <div className="grid grid-cols-3 gap-3">
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Total materia-prima</p><p className="text-lg font-semibold">{BRL(totLaser + totRouter)}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>LASER</p><p className="text-lg font-semibold">{BRL(totLaser)}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>ROUTER</p><p className="text-lg font-semibold">{BRL(totRouter)}</p></div>
+      </div>
+
+      {carregando ? (
+        <p className="text-sm" style={{ color: "#948B7C" }}>Calculando...</p>
+      ) : !linhas.length ? (
+        <div style={card}><p className="text-sm" style={{ color: "#6E675C" }}>Sem consumo no periodo.</p></div>
+      ) : (
+        <div className="overflow-x-auto" style={card}>
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ color: "#948B7C", textAlign: "left" }}>
+                <th className="py-2 pr-3">Empresa</th><th className="py-2 pr-3">Fornecedor</th>
+                <th className="py-2 pr-3">Insumo</th><th className="py-2 pr-3 text-right">Quantidade</th>
+                <th className="py-2 pr-3 text-right">Custo</th>
+              </tr>
+            </thead>
+            <tbody>
+              {linhas.map((l, i) => (
+                <tr key={i} style={{ borderTop: "1px solid #F0EADD" }}>
+                  <td className="py-2 pr-3"><span className="px-2 py-0.5 rounded text-[11px]" style={{ background: l.empresa === "ROUTER" ? "#E8EEF6" : "#F3ECDD", color: "#4A443A" }}>{l.empresa}</span></td>
+                  <td className="py-2 pr-3">{l.fornecedor}</td>
+                  <td className="py-2 pr-3">{l.codigo ? l.codigo + " — " : ""}{l.insumo}</td>
+                  <td className="py-2 pr-3 text-right">{(Math.round(l.quantidade * 1000) / 1000).toLocaleString("pt-BR")} {l.unidade}</td>
+                  <td className="py-2 pr-3 text-right font-semibold">{BRL(l.custo)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
