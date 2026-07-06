@@ -761,7 +761,7 @@ export default function App() {
           <p className="text-xs" style={{ color: salvo ? "#B5A98F" : "#E8C468" }}>{salvo ? "✓ Tudo salvo" : "Salvando…"}</p>
         </div>
         <nav className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
-          {[["produtos", "Produtos e Preços"], ["vendas", "Vendas"], ["tempo-real", "Vendas ao vivo"], ["financeiro", "Financeiro"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["marketplaces", "Marketplaces"], ["ajuda", "Como usar"]].map(([k, l]) => (
+          {[["produtos", "Produtos e Preços"], ["tempo-real", "Vendas"], ["vendas", "Registros manuais"], ["financeiro", "Financeiro"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["marketplaces", "Marketplaces"], ["ajuda", "Como usar"]].map(([k, l]) => (
             <button key={k} onClick={() => { setTab(k); setProdAberto(null); }}
               className="px-4 py-2.5 text-sm font-medium rounded-t-lg whitespace-nowrap"
               style={tab === k ? { background: "#F5EFE2", color: "#1A1815" } : { color: "#D8CFBC" }}>
@@ -864,6 +864,14 @@ export default function App() {
                     </Field>
                     <Field label="Nome do produto" w="min(320px,100%)">
                       <input className={inputCls} style={inputStyle} value={prod.nome} onChange={(e) => setProduto(prod.id, { nome: e.target.value })} />
+                    </Field>
+                    <Field label="Empresa" w="130px">
+                      <select className={inputCls} style={inputStyle}
+                        value={prod.empresa || empresaDoSku(prod.sku)}
+                        onChange={(e) => setProduto(prod.id, { empresa: e.target.value })}>
+                        <option value="LASER">LASER</option>
+                        <option value="ROUTER">ROUTER</option>
+                      </select>
                     </Field>
                   </div>
                   <div className="flex gap-2">
@@ -2127,20 +2135,32 @@ function ImportadorTikTok({ produtos, insumos, marketplaces, vendas, onImport, s
 }
 
 
-// ============ VENDAS AO VIVO (Tiny) ============
+// ============ EMPRESA (LASER / ROUTER) ============
+// Regra: ROUTER quando o numero inicial do SKU e 2, 7, 9 ou de 25 a 36; senao LASER.
+function empresaDoSku(sku) {
+  const m = String(sku || "").match(/^\s*(\d+)/);
+  if (!m) return "LASER";
+  const n = parseInt(m[1], 10);
+  if (n === 2 || n === 7 || n === 9 || (n >= 25 && n <= 36)) return "ROUTER";
+  return "LASER";
+}
+
+// ============ VENDAS (Tiny) — com filtros e separacao por empresa ============
 function VendasTiny({ produtos, insumos, marketplaces }) {
   const [vendas, setVendas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [aoVivo, setAoVivo] = useState(false);
   const [filtro, setFiltro] = useState("pagos");
+  const [empresa, setEmpresa] = useState("todas");
+  const [canalF, setCanalF] = useState("todos");
+  const [busca, setBusca] = useState("");
+  const [dataIni, setDataIni] = useState("");
+  const [dataFim, setDataFim] = useState("");
 
   async function carregar() {
     const { data, error } = await supabase
-      .from("vendas")
-      .select("*")
-      .order("data_pedido", { ascending: false })
-      .limit(2000);
+      .from("vendas").select("*").order("data_pedido", { ascending: false }).limit(3000);
     if (error) setErro(error.message);
     else { setVendas(data || []); setErro(""); }
     setCarregando(false);
@@ -2162,12 +2182,10 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
     return () => { supabase.removeChannel(canal); };
   }, []);
 
-  // Considera "paga" tudo que nao esta em aberto, cancelado, dados incompletos ou nao entregue
   function ehPaga(sit) {
-    const s = String(sit || "").toLowerCase();
-    return !(s.includes("aberto") || s.includes("cancel") || s.includes("incomplet") || s.includes("nao entregue") || s.includes("não entregue"));
+    const t = String(sit || "").toLowerCase();
+    return !(t.includes("aberto") || t.includes("cancel") || t.includes("incomplet") || t.includes("nao entregue") || t.includes("não entregue"));
   }
-
   function acharMarketplace(canal) {
     if (!canal) return null;
     const c = String(canal).toLowerCase();
@@ -2178,7 +2196,22 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
     if (c.includes("mercado") || c.includes("ml")) return byId("ml-classico");
     return marketplaces.find((m) => String(m.nome || "").toLowerCase().includes(c)) || null;
   }
-
+  function grupoCanal(canal) {
+    const c = String(canal || "").toLowerCase();
+    if (c.includes("shopee")) return "Shopee";
+    if (c.includes("tiktok")) return "TikTok";
+    if (c.includes("shein")) return "SHEIN";
+    if (c.includes("mercado") || c.includes("ml")) return "Mercado Livre";
+    return canal || "Outro";
+  }
+  function empresaDaVenda(v) {
+    for (const it of v.itens || []) {
+      const prod = casarSku(it.sku, produtos);
+      const e = (prod && prod.empresa) || empresaDoSku((prod && prod.sku) || it.sku);
+      if (e) return e;
+    }
+    return "LASER";
+  }
   function calc(v) {
     const mp = acharMarketplace(v.canal);
     let receita = 0, custo = 0, taxas = 0, imposto = 0, semSku = 0;
@@ -2200,9 +2233,33 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
     return { receita, custo, taxas, imposto, lucro, margem: receita ? (lucro / receita) * 100 : 0, mp, semSku };
   }
 
-  const todas = useMemo(() => vendas.map((v) => ({ v, c: calc(v) })), [vendas, produtos, insumos, marketplaces]);
-  const linhas = filtro === "pagos" ? todas.filter(({ v }) => ehPaga(v.situacao)) : todas;
-  const ocultas = todas.length - linhas.length;
+  const enriquecidas = useMemo(() => vendas.map((v) => ({
+    v, c: calc(v), emp: empresaDaVenda(v), grupo: grupoCanal(v.canal),
+  })), [vendas, produtos, insumos, marketplaces]);
+
+  const canaisPresentes = useMemo(() => Array.from(new Set(enriquecidas.map((x) => x.grupo))), [enriquecidas]);
+
+  function matchBusca(v) {
+    const q = busca.trim().toLowerCase();
+    if (!q) return true;
+    return (v.itens || []).some((it) => {
+      const prod = casarSku(it.sku, produtos);
+      return String(it.sku || "").toLowerCase().includes(q)
+        || String(it.descricao || "").toLowerCase().includes(q)
+        || (prod && String(prod.nome || "").toLowerCase().includes(q));
+    });
+  }
+
+  const linhas = enriquecidas.filter(({ v, emp, grupo }) => {
+    if (filtro === "pagos" && !ehPaga(v.situacao)) return false;
+    if (empresa !== "todas" && emp !== empresa) return false;
+    if (canalF !== "todos" && grupo !== canalF) return false;
+    if (dataIni && String(v.data_pedido || "") < dataIni) return false;
+    if (dataFim && String(v.data_pedido || "") > dataFim) return false;
+    if (!matchBusca(v)) return false;
+    return true;
+  });
+
   const tot = linhas.reduce((s, { c }) => ({
     receita: s.receita + c.receita, custo: s.custo + c.custo, taxas: s.taxas + c.taxas,
     imposto: s.imposto + c.imposto, lucro: s.lucro + c.lucro,
@@ -2210,35 +2267,54 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
   const margemMedia = tot.receita ? (tot.lucro / tot.receita) * 100 : 0;
 
   const card = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
+  const ctrl = { borderColor: "#E4DCCB", background: "#FFFFFF" };
+
+  function limpar() { setEmpresa("todas"); setCanalF("todos"); setBusca(""); setDataIni(""); setDataFim(""); setFiltro("pagos"); }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <div>
-          <h2 className="text-lg font-semibold" style={{ color: "#1A1815" }}>Vendas ao vivo</h2>
+          <h2 className="text-lg font-semibold" style={{ color: "#1A1815" }}>Vendas</h2>
           <p className="text-xs" style={{ color: "#948B7C" }}>
-            Pedidos vindos do Tiny (Shopee, TikTok...) em tempo real, com lucro calculado.{" "}
-            {aoVivo ? "🟢 Conectado ao vivo" : "⚪ Conectando..."}
+            Vendas vindas do Tiny, em tempo real, com lucro calculado.{" "}
+            {aoVivo ? "🟢 Ao vivo" : "⚪ Conectando..."}
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <select value={filtro} onChange={(e) => setFiltro(e.target.value)}
-            className="px-2 py-2 rounded-lg border text-sm" style={{ borderColor: "#E4DCCB", background: "#FFFFFF" }}>
-            <option value="pagos">Somente pagos</option>
-            <option value="todos">Todos os pedidos</option>
+        <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1A1815", color: "#F5EFE2" }}>Atualizar</button>
+      </div>
+
+      {/* filtros */}
+      <div className="flex flex-wrap items-end gap-2 mb-4">
+        <label className="text-xs" style={{ color: "#6E675C" }}>Empresa
+          <select value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
+            <option value="todas">Todas</option><option value="LASER">LASER</option><option value="ROUTER">ROUTER</option>
           </select>
-          <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm"
-            style={{ background: "#1A1815", color: "#F5EFE2" }}>Atualizar</button>
-        </div>
+        </label>
+        <label className="text-xs" style={{ color: "#6E675C" }}>Marketplace
+          <select value={canalF} onChange={(e) => setCanalF(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
+            <option value="todos">Todos</option>
+            {canaisPresentes.map((g) => <option key={g} value={g}>{g}</option>)}
+          </select>
+        </label>
+        <label className="text-xs" style={{ color: "#6E675C" }}>Situacao
+          <select value={filtro} onChange={(e) => setFiltro(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
+            <option value="pagos">Somente pagos</option><option value="todos">Todos</option>
+          </select>
+        </label>
+        <label className="text-xs" style={{ color: "#6E675C" }}>De
+          <input type="date" value={dataIni} onChange={(e) => setDataIni(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl} />
+        </label>
+        <label className="text-xs" style={{ color: "#6E675C" }}>Ate
+          <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl} />
+        </label>
+        <label className="text-xs flex-1 min-w-[180px]" style={{ color: "#6E675C" }}>Produto (SKU ou nome)
+          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar..." className="block w-full px-2 py-2 rounded-lg border text-sm" style={ctrl} />
+        </label>
+        <button onClick={limpar} className="px-3 py-2 rounded-lg border text-sm" style={{ color: "#6E675C", borderColor: "#E4DCCB" }}>Limpar</button>
       </div>
 
       {erro && <p className="text-sm mb-3" style={{ color: "#B4462F" }}>Erro: {erro}</p>}
-
-      {filtro === "pagos" && ocultas > 0 && (
-        <p className="text-xs mb-3" style={{ color: "#948B7C" }}>
-          {ocultas} pedido(s) em aberto/cancelados/incompletos ocultos. Troque para "Todos os pedidos" para ver.
-        </p>
-      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Faturamento</p><p className="text-lg font-semibold">{BRL(tot.receita)}</p></div>
@@ -2250,11 +2326,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
       {carregando ? (
         <p className="text-sm" style={{ color: "#948B7C" }}>Carregando vendas...</p>
       ) : linhas.length === 0 ? (
-        <div style={card}>
-          <p className="text-sm" style={{ color: "#6E675C" }}>
-            Nenhuma venda paga ainda. Assim que um pedido for pago na Shopee ou no TikTok (via Tiny), ele aparece aqui automaticamente.
-          </p>
-        </div>
+        <div style={card}><p className="text-sm" style={{ color: "#6E675C" }}>Nenhuma venda com esses filtros.</p></div>
       ) : (
         <div className="overflow-x-auto" style={card}>
           <table className="w-full text-sm">
@@ -2262,6 +2334,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
               <tr style={{ color: "#948B7C", textAlign: "left" }}>
                 <th className="py-2 pr-3">Data</th>
                 <th className="py-2 pr-3">Pedido</th>
+                <th className="py-2 pr-3">Empresa</th>
                 <th className="py-2 pr-3">Canal</th>
                 <th className="py-2 pr-3">Situacao</th>
                 <th className="py-2 pr-3">Cliente</th>
@@ -2275,10 +2348,11 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
               </tr>
             </thead>
             <tbody>
-              {linhas.map(({ v, c }) => (
+              {linhas.map(({ v, c, emp }) => (
                 <tr key={v.id} style={{ borderTop: "1px solid #F0EADD", opacity: ehPaga(v.situacao) ? 1 : 0.55 }}>
                   <td className="py-2 pr-3">{fmtData(v.data_pedido)}</td>
                   <td className="py-2 pr-3">{v.numero || "—"}</td>
+                  <td className="py-2 pr-3"><span className="px-2 py-0.5 rounded text-[11px]" style={{ background: emp === "ROUTER" ? "#E8EEF6" : "#F3ECDD", color: "#4A443A" }}>{emp}</span></td>
                   <td className="py-2 pr-3">{v.canal || "—"}</td>
                   <td className="py-2 pr-3">{v.situacao || "—"}</td>
                   <td className="py-2 pr-3">{v.cliente_nome || "—"}</td>
@@ -2294,7 +2368,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
             </tbody>
           </table>
           <p className="text-[11px] mt-3" style={{ color: "#B5A98F" }}>
-            "Somente pagos" exclui pedidos em aberto, cancelados e com dados incompletos. ⚠ = item sem SKU no catalogo (custo nao calculado para ele).
+            "Somente pagos" exclui pedidos em aberto, cancelados e incompletos. Empresa vem do produto (regra de SKU, editavel no cadastro). ⚠ = item sem SKU no catalogo.
           </p>
         </div>
       )}
