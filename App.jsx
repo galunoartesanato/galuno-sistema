@@ -761,7 +761,7 @@ export default function App() {
           <p className="text-xs" style={{ color: salvo ? "#B5A98F" : "#E8C468" }}>{salvo ? "✓ Tudo salvo" : "Salvando…"}</p>
         </div>
         <nav className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
-          {[["produtos", "Produtos e Preços"], ["tempo-real", "Vendas"], ["financeiro", "Financeiro"], ["relatorios", "Relatórios"], ["clientes", "Clientes"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["rh", "RH"], ["marketplaces", "Marketplaces"], ["ajuda", "Como usar"]].map(([k, l]) => (
+          {[["produtos", "Produtos e Preços"], ["tempo-real", "Vendas"], ["financeiro", "Financeiro"], ["relatorios", "Relatórios"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["rh", "RH"], ["marketplaces", "Marketplaces"], ["ajuda", "Como usar"]].map(([k, l]) => (
             <button key={k} onClick={() => { setTab(k); setProdAberto(null); }}
               className="px-4 py-2.5 text-sm font-medium rounded-t-lg whitespace-nowrap"
               style={tab === k ? { background: "#F5EFE2", color: "#1A1815" } : { color: "#D8CFBC" }}>
