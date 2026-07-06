@@ -761,7 +761,7 @@ export default function App() {
           <p className="text-xs" style={{ color: salvo ? "#B5A98F" : "#E8C468" }}>{salvo ? "✓ Tudo salvo" : "Salvando…"}</p>
         </div>
         <nav className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
-          {[["produtos", "Produtos e Preços"], ["tempo-real", "Vendas"], ["vendas", "Registros manuais"], ["financeiro", "Financeiro"], ["relatorios", "Relatórios"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["rh", "RH"], ["marketplaces", "Marketplaces"], ["ajuda", "Como usar"]].map(([k, l]) => (
+          {[["produtos", "Produtos e Preços"], ["tempo-real", "Vendas"], ["financeiro", "Financeiro"], ["relatorios", "Relatórios"], ["clientes", "Clientes"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["rh", "RH"], ["marketplaces", "Marketplaces"], ["ajuda", "Como usar"]].map(([k, l]) => (
             <button key={k} onClick={() => { setTab(k); setProdAberto(null); }}
               className="px-4 py-2.5 text-sm font-medium rounded-t-lg whitespace-nowrap"
               style={tab === k ? { background: "#F5EFE2", color: "#1A1815" } : { color: "#D8CFBC" }}>
@@ -1100,6 +1100,8 @@ export default function App() {
         {tab === "rh" && <RH fabricas={fabricas} setFab={setFab} />}
 
         {tab === "relatorios" && <Relatorios produtos={produtos} insumos={insumos} fornecedores={fornecedores} />}
+
+        {tab === "clientes" && <Clientes />}
 
         {/* ============ FINANCEIRO ============ */}
         {tab === "financeiro" && (() => {
@@ -2574,6 +2576,159 @@ function Relatorios({ produtos, insumos, fornecedores }) {
                   <td className="py-2 pr-3">{l.codigo ? l.codigo + " — " : ""}{l.insumo}</td>
                   <td className="py-2 pr-3 text-right">{(Math.round(l.quantidade * 1000) / 1000).toLocaleString("pt-BR")} {l.unidade}</td>
                   <td className="py-2 pr-3 text-right font-semibold">{BRL(l.custo)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ============ CLIENTES (dados de contato a partir das vendas do Tiny) ============
+function Clientes() {
+  const [periodo, setPeriodo] = useState("tudo");
+  const [dataIni, setDataIni] = useState("");
+  const [dataFim, setDataFim] = useState("");
+  const [vendas, setVendas] = useState([]);
+  const [carregando, setCarregando] = useState(false);
+  const [erro, setErro] = useState("");
+  const [busca, setBusca] = useState("");
+
+  const isoD = (d) => d.toISOString().slice(0, 10);
+  function intervalo() {
+    const hoje = new Date();
+    if (periodo === "semana") return { ini: isoD(new Date(hoje.getTime() - 7 * 86400000)), fim: isoD(hoje) };
+    if (periodo === "mes") { const y = hoje.getFullYear(), m = hoje.getMonth(); return { ini: isoD(new Date(y, m - 1, 1)), fim: isoD(new Date(y, m, 0)) }; }
+    if (periodo === "custom") return { ini: dataIni, fim: dataFim };
+    return { ini: "", fim: "" };
+  }
+
+  async function carregar() {
+    setCarregando(true); setErro("");
+    const { ini, fim } = intervalo();
+    let q = supabase.from("vendas").select("cliente_nome,valor_total,data_pedido,payload_raw").order("data_pedido", { ascending: false }).limit(5000);
+    if (ini) q = q.gte("data_pedido", ini);
+    if (fim) q = q.lte("data_pedido", fim);
+    const { data, error } = await q;
+    if (error) setErro(error.message); else setVendas(data || []);
+    setCarregando(false);
+  }
+  useEffect(() => { carregar(); }, []);
+
+  function dados(v) {
+    const c = (v.payload_raw && v.payload_raw.cliente) || {};
+    const ent = (v.payload_raw && v.payload_raw.endereco_entrega) || {};
+    return {
+      nome: c.nome || v.cliente_nome || "",
+      telefone: c.fone || ent.fone || "",
+      cidade: c.cidade || ent.cidade || "",
+      uf: c.uf || ent.uf || "",
+      email: c.email || "",
+      cpf: c.cpf_cnpj || "",
+    };
+  }
+
+  const clientes = useMemo(() => {
+    const map = {};
+    for (const v of vendas) {
+      const d = dados(v);
+      const key = String(d.telefone || d.cpf || (d.nome + "|" + d.cidade)).trim().toLowerCase();
+      if (!key || key === "|") continue;
+      if (!map[key]) map[key] = { ...d, pedidos: 0, total: 0, ultima: "" };
+      map[key].pedidos += 1;
+      map[key].total += num(v.valor_total);
+      const dt = String(v.data_pedido || "");
+      if (dt > map[key].ultima) map[key].ultima = dt;
+      for (const f of ["nome", "telefone", "cidade", "uf", "email"]) if (!map[key][f] && d[f]) map[key][f] = d[f];
+    }
+    let lista = Object.values(map);
+    const qq = busca.trim().toLowerCase();
+    if (qq) lista = lista.filter((c) => (c.nome + " " + c.telefone + " " + c.cidade + " " + c.email).toLowerCase().includes(qq));
+    return lista.sort((a, b) => String(b.ultima).localeCompare(String(a.ultima)));
+  }, [vendas, busca]);
+
+  async function baixarExcel() {
+    const XLSX = await import("xlsx");
+    const rows = clientes.map((c) => ({
+      Nome: c.nome, Telefone: c.telefone, Cidade: c.cidade, UF: c.uf, "E-mail": c.email,
+      Pedidos: c.pedidos, "Total (R$)": Math.round(c.total * 100) / 100, "Ultima compra": c.ultima,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Clientes");
+    XLSX.writeFile(wb, "clientes.xlsx");
+  }
+
+  const card = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
+  const ctrl = { borderColor: "#E4DCCB", background: "#FFFFFF" };
+
+  return (
+    <div className="space-y-5">
+      <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBF6E9", border: "1px solid #E8D9A8", color: "#6B5A1E" }}>
+        Clientes que compraram, montados a partir dos pedidos do Tiny. Campos disponiveis: nome, telefone, cidade/UF e e-mail (sexo e idade nao vem nos pedidos). Use para conhecer seu publico e, no futuro, disparos de mensagens.
+      </div>
+
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-xs" style={{ color: "#6E675C" }}>Periodo
+          <select value={periodo} onChange={(e) => setPeriodo(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
+            <option value="tudo">Tudo</option>
+            <option value="semana">Ultimos 7 dias</option>
+            <option value="mes">Mes anterior</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </label>
+        {periodo === "custom" && (
+          <>
+            <label className="text-xs" style={{ color: "#6E675C" }}>De
+              <input type="date" value={dataIni} onChange={(e) => setDataIni(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl} />
+            </label>
+            <label className="text-xs" style={{ color: "#6E675C" }}>Ate
+              <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl} />
+            </label>
+          </>
+        )}
+        <label className="text-xs flex-1 min-w-[180px]" style={{ color: "#6E675C" }}>Buscar
+          <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, cidade, telefone..." className="block w-full px-2 py-2 rounded-lg border text-sm" style={ctrl} />
+        </label>
+        <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1A1815", color: "#F5EFE2" }}>Atualizar</button>
+        <button onClick={baixarExcel} disabled={!clientes.length} className="px-3 py-2 rounded-lg border text-sm disabled:opacity-50" style={{ color: "#1A1815", borderColor: "#E4DCCB" }}>Baixar Excel</button>
+      </div>
+
+      {erro && <p className="text-sm" style={{ color: "#B4462F" }}>Erro: {erro}</p>}
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Clientes</p><p className="text-lg font-semibold">{clientes.length}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Com telefone</p><p className="text-lg font-semibold">{clientes.filter((c) => c.telefone).length}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Com e-mail</p><p className="text-lg font-semibold">{clientes.filter((c) => c.email).length}</p></div>
+      </div>
+
+      {carregando ? (
+        <p className="text-sm" style={{ color: "#948B7C" }}>Carregando...</p>
+      ) : !clientes.length ? (
+        <div style={card}><p className="text-sm" style={{ color: "#6E675C" }}>Nenhum cliente no periodo.</p></div>
+      ) : (
+        <div className="overflow-x-auto" style={card}>
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ color: "#948B7C", textAlign: "left" }}>
+                <th className="py-2 pr-3">Nome</th><th className="py-2 pr-3">Telefone</th>
+                <th className="py-2 pr-3">Cidade/UF</th><th className="py-2 pr-3">E-mail</th>
+                <th className="py-2 pr-3 text-right">Pedidos</th><th className="py-2 pr-3 text-right">Total</th><th className="py-2 pr-3">Ultima</th>
+              </tr>
+            </thead>
+            <tbody>
+              {clientes.map((c, i) => (
+                <tr key={i} style={{ borderTop: "1px solid #F0EADD" }}>
+                  <td className="py-2 pr-3">{c.nome || "—"}</td>
+                  <td className="py-2 pr-3">{c.telefone || "—"}</td>
+                  <td className="py-2 pr-3">{c.cidade}{c.uf ? "/" + c.uf : ""}</td>
+                  <td className="py-2 pr-3">{c.email || "—"}</td>
+                  <td className="py-2 pr-3 text-right">{c.pedidos}</td>
+                  <td className="py-2 pr-3 text-right">{BRL(c.total)}</td>
+                  <td className="py-2 pr-3">{fmtData(c.ultima)}</td>
                 </tr>
               ))}
             </tbody>
