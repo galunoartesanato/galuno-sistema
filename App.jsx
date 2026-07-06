@@ -2128,20 +2128,19 @@ function ImportadorTikTok({ produtos, insumos, marketplaces, vendas, onImport, s
 
 
 // ============ VENDAS AO VIVO (Tiny) ============
-// Le a tabela "vendas" do Supabase (preenchida pela funcao a partir do Tiny),
-// atualiza em tempo real e calcula o lucro reaproveitando a mesma logica do app.
 function VendasTiny({ produtos, insumos, marketplaces }) {
   const [vendas, setVendas] = useState([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
   const [aoVivo, setAoVivo] = useState(false);
+  const [filtro, setFiltro] = useState("pagos");
 
   async function carregar() {
     const { data, error } = await supabase
       .from("vendas")
       .select("*")
       .order("data_pedido", { ascending: false })
-      .limit(1000);
+      .limit(2000);
     if (error) setErro(error.message);
     else { setVendas(data || []); setErro(""); }
     setCarregando(false);
@@ -2162,6 +2161,12 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
       .subscribe((status) => setAoVivo(status === "SUBSCRIBED"));
     return () => { supabase.removeChannel(canal); };
   }, []);
+
+  // Considera "paga" tudo que nao esta em aberto, cancelado, dados incompletos ou nao entregue
+  function ehPaga(sit) {
+    const s = String(sit || "").toLowerCase();
+    return !(s.includes("aberto") || s.includes("cancel") || s.includes("incomplet") || s.includes("nao entregue") || s.includes("não entregue"));
+  }
 
   function acharMarketplace(canal) {
     if (!canal) return null;
@@ -2195,7 +2200,9 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
     return { receita, custo, taxas, imposto, lucro, margem: receita ? (lucro / receita) * 100 : 0, mp, semSku };
   }
 
-  const linhas = useMemo(() => vendas.map((v) => ({ v, c: calc(v) })), [vendas, produtos, insumos, marketplaces]);
+  const todas = useMemo(() => vendas.map((v) => ({ v, c: calc(v) })), [vendas, produtos, insumos, marketplaces]);
+  const linhas = filtro === "pagos" ? todas.filter(({ v }) => ehPaga(v.situacao)) : todas;
+  const ocultas = todas.length - linhas.length;
   const tot = linhas.reduce((s, { c }) => ({
     receita: s.receita + c.receita, custo: s.custo + c.custo, taxas: s.taxas + c.taxas,
     imposto: s.imposto + c.imposto, lucro: s.lucro + c.lucro,
@@ -2214,11 +2221,24 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
             {aoVivo ? "🟢 Conectado ao vivo" : "⚪ Conectando..."}
           </p>
         </div>
-        <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm"
-          style={{ background: "#1A1815", color: "#F5EFE2" }}>Atualizar</button>
+        <div className="flex items-center gap-2">
+          <select value={filtro} onChange={(e) => setFiltro(e.target.value)}
+            className="px-2 py-2 rounded-lg border text-sm" style={{ borderColor: "#E4DCCB", background: "#FFFFFF" }}>
+            <option value="pagos">Somente pagos</option>
+            <option value="todos">Todos os pedidos</option>
+          </select>
+          <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm"
+            style={{ background: "#1A1815", color: "#F5EFE2" }}>Atualizar</button>
+        </div>
       </div>
 
       {erro && <p className="text-sm mb-3" style={{ color: "#B4462F" }}>Erro: {erro}</p>}
+
+      {filtro === "pagos" && ocultas > 0 && (
+        <p className="text-xs mb-3" style={{ color: "#948B7C" }}>
+          {ocultas} pedido(s) em aberto/cancelados/incompletos ocultos. Troque para "Todos os pedidos" para ver.
+        </p>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Faturamento</p><p className="text-lg font-semibold">{BRL(tot.receita)}</p></div>
@@ -2232,7 +2252,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
       ) : linhas.length === 0 ? (
         <div style={card}>
           <p className="text-sm" style={{ color: "#6E675C" }}>
-            Nenhuma venda ainda. Assim que um pedido entrar na Shopee ou no TikTok (via Tiny), ele aparece aqui automaticamente — sem precisar atualizar a pagina.
+            Nenhuma venda paga ainda. Assim que um pedido for pago na Shopee ou no TikTok (via Tiny), ele aparece aqui automaticamente.
           </p>
         </div>
       ) : (
@@ -2243,6 +2263,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
                 <th className="py-2 pr-3">Data</th>
                 <th className="py-2 pr-3">Pedido</th>
                 <th className="py-2 pr-3">Canal</th>
+                <th className="py-2 pr-3">Situacao</th>
                 <th className="py-2 pr-3">Cliente</th>
                 <th className="py-2 pr-3 text-right">Itens</th>
                 <th className="py-2 pr-3 text-right">Receita</th>
@@ -2255,10 +2276,11 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
             </thead>
             <tbody>
               {linhas.map(({ v, c }) => (
-                <tr key={v.id} style={{ borderTop: "1px solid #F0EADD" }}>
+                <tr key={v.id} style={{ borderTop: "1px solid #F0EADD", opacity: ehPaga(v.situacao) ? 1 : 0.55 }}>
                   <td className="py-2 pr-3">{fmtData(v.data_pedido)}</td>
                   <td className="py-2 pr-3">{v.numero || "—"}</td>
                   <td className="py-2 pr-3">{v.canal || "—"}</td>
+                  <td className="py-2 pr-3">{v.situacao || "—"}</td>
                   <td className="py-2 pr-3">{v.cliente_nome || "—"}</td>
                   <td className="py-2 pr-3 text-right">{(v.itens || []).length}{c.semSku ? " ⚠" : ""}</td>
                   <td className="py-2 pr-3 text-right">{BRL(c.receita)}</td>
@@ -2272,7 +2294,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
             </tbody>
           </table>
           <p className="text-[11px] mt-3" style={{ color: "#B5A98F" }}>
-            ⚠ = algum item sem SKU correspondente no seu catalogo (custo nao calculado para ele). Cadastre/ajuste o SKU do produto para o lucro ficar completo.
+            "Somente pagos" exclui pedidos em aberto, cancelados e com dados incompletos. ⚠ = item sem SKU no catalogo (custo nao calculado para ele).
           </p>
         </div>
       )}
