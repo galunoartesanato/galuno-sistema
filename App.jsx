@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { supabase } from "./supabaseClient";
 
 // ---------- helpers ----------
 const BRL = (v) =>
@@ -760,7 +761,7 @@ export default function App() {
           <p className="text-xs" style={{ color: salvo ? "#B5A98F" : "#E8C468" }}>{salvo ? "✓ Tudo salvo" : "Salvando…"}</p>
         </div>
         <nav className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
-          {[["produtos", "Produtos e Preços"], ["vendas", "Vendas"], ["financeiro", "Financeiro"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["marketplaces", "Marketplaces"], ["ajuda", "Como usar"]].map(([k, l]) => (
+          {[["produtos", "Produtos e Preços"], ["vendas", "Vendas"], ["tempo-real", "Vendas ao vivo"], ["financeiro", "Financeiro"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["marketplaces", "Marketplaces"], ["ajuda", "Como usar"]].map(([k, l]) => (
             <button key={k} onClick={() => { setTab(k); setProdAberto(null); }}
               className="px-4 py-2.5 text-sm font-medium rounded-t-lg whitespace-nowrap"
               style={tab === k ? { background: "#F5EFE2", color: "#1A1815" } : { color: "#D8CFBC" }}>
@@ -1083,6 +1084,10 @@ export default function App() {
             </div>
           );
         })()}
+
+        {tab === "tempo-real" && (
+          <VendasTiny produtos={produtos} insumos={insumos} marketplaces={marketplaces} />
+        )}
 
         {/* ============ FINANCEIRO ============ */}
         {tab === "financeiro" && (() => {
@@ -2115,6 +2120,160 @@ function ImportadorTikTok({ produtos, insumos, marketplaces, vendas, onImport, s
               Confirmar importação de {preview.vendas.length} vendas
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ============ VENDAS AO VIVO (Tiny) ============
+// Le a tabela "vendas" do Supabase (preenchida pela funcao a partir do Tiny),
+// atualiza em tempo real e calcula o lucro reaproveitando a mesma logica do app.
+function VendasTiny({ produtos, insumos, marketplaces }) {
+  const [vendas, setVendas] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
+  const [aoVivo, setAoVivo] = useState(false);
+
+  async function carregar() {
+    const { data, error } = await supabase
+      .from("vendas")
+      .select("*")
+      .order("data_pedido", { ascending: false })
+      .limit(1000);
+    if (error) setErro(error.message);
+    else { setVendas(data || []); setErro(""); }
+    setCarregando(false);
+  }
+
+  useEffect(() => {
+    carregar();
+    const canal = supabase
+      .channel("vendas-tempo-real")
+      .on("postgres_changes", { event: "*", schema: "public", table: "vendas" }, (payload) => {
+        const nova = payload.new;
+        if (!nova || !nova.id) return;
+        setVendas((atual) => {
+          const semEla = atual.filter((v) => v.id !== nova.id);
+          return [nova, ...semEla].sort((a, b) => String(b.data_pedido || "").localeCompare(String(a.data_pedido || "")));
+        });
+      })
+      .subscribe((status) => setAoVivo(status === "SUBSCRIBED"));
+    return () => { supabase.removeChannel(canal); };
+  }, []);
+
+  function acharMarketplace(canal) {
+    if (!canal) return null;
+    const c = String(canal).toLowerCase();
+    const byId = (id) => marketplaces.find((m) => m.id === id);
+    if (c.includes("shopee")) return byId("shopee");
+    if (c.includes("tiktok")) return byId("tiktok");
+    if (c.includes("shein")) return byId("shein");
+    if (c.includes("mercado") || c.includes("ml")) return byId("ml-classico");
+    return marketplaces.find((m) => String(m.nome || "").toLowerCase().includes(c)) || null;
+  }
+
+  function calc(v) {
+    const mp = acharMarketplace(v.canal);
+    let receita = 0, custo = 0, taxas = 0, imposto = 0, semSku = 0;
+    for (const it of v.itens || []) {
+      const q = num(it.quantidade) || 0;
+      const pu = num(it.valor_unitario) || 0;
+      receita += pu * q;
+      const prod = casarSku(it.sku, produtos);
+      if (prod) {
+        custo += custoProduto(prod, insumos) * q;
+        imposto += pu * q * (num(prod.imposto) / 100);
+        taxas += mp ? taxasDoPreco(mp, pu, pesoConsiderado(prod)) * q : 0;
+      } else {
+        semSku += q;
+        taxas += mp ? taxasDoPreco(mp, pu, 0) * q : 0;
+      }
+    }
+    const lucro = receita - custo - taxas - imposto;
+    return { receita, custo, taxas, imposto, lucro, margem: receita ? (lucro / receita) * 100 : 0, mp, semSku };
+  }
+
+  const linhas = useMemo(() => vendas.map((v) => ({ v, c: calc(v) })), [vendas, produtos, insumos, marketplaces]);
+  const tot = linhas.reduce((s, { c }) => ({
+    receita: s.receita + c.receita, custo: s.custo + c.custo, taxas: s.taxas + c.taxas,
+    imposto: s.imposto + c.imposto, lucro: s.lucro + c.lucro,
+  }), { receita: 0, custo: 0, taxas: 0, imposto: 0, lucro: 0 });
+  const margemMedia = tot.receita ? (tot.lucro / tot.receita) * 100 : 0;
+
+  const card = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-lg font-semibold" style={{ color: "#1A1815" }}>Vendas ao vivo</h2>
+          <p className="text-xs" style={{ color: "#948B7C" }}>
+            Pedidos vindos do Tiny (Shopee, TikTok...) em tempo real, com lucro calculado.{" "}
+            {aoVivo ? "🟢 Conectado ao vivo" : "⚪ Conectando..."}
+          </p>
+        </div>
+        <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm"
+          style={{ background: "#1A1815", color: "#F5EFE2" }}>Atualizar</button>
+      </div>
+
+      {erro && <p className="text-sm mb-3" style={{ color: "#B4462F" }}>Erro: {erro}</p>}
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Faturamento</p><p className="text-lg font-semibold">{BRL(tot.receita)}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Lucro</p><p className="text-lg font-semibold" style={{ color: tot.lucro >= 0 ? "#2E7D4F" : "#B4462F" }}>{BRL(tot.lucro)}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Margem media</p><p className="text-lg font-semibold">{isFinite(margemMedia) ? margemMedia.toFixed(1) + "%" : "—"}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>N de vendas</p><p className="text-lg font-semibold">{linhas.length}</p></div>
+      </div>
+
+      {carregando ? (
+        <p className="text-sm" style={{ color: "#948B7C" }}>Carregando vendas...</p>
+      ) : linhas.length === 0 ? (
+        <div style={card}>
+          <p className="text-sm" style={{ color: "#6E675C" }}>
+            Nenhuma venda ainda. Assim que um pedido entrar na Shopee ou no TikTok (via Tiny), ele aparece aqui automaticamente — sem precisar atualizar a pagina.
+          </p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto" style={card}>
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ color: "#948B7C", textAlign: "left" }}>
+                <th className="py-2 pr-3">Data</th>
+                <th className="py-2 pr-3">Pedido</th>
+                <th className="py-2 pr-3">Canal</th>
+                <th className="py-2 pr-3">Cliente</th>
+                <th className="py-2 pr-3 text-right">Itens</th>
+                <th className="py-2 pr-3 text-right">Receita</th>
+                <th className="py-2 pr-3 text-right">Custo</th>
+                <th className="py-2 pr-3 text-right">Taxas</th>
+                <th className="py-2 pr-3 text-right">Imposto</th>
+                <th className="py-2 pr-3 text-right">Lucro</th>
+                <th className="py-2 pr-3 text-right">Margem</th>
+              </tr>
+            </thead>
+            <tbody>
+              {linhas.map(({ v, c }) => (
+                <tr key={v.id} style={{ borderTop: "1px solid #F0EADD" }}>
+                  <td className="py-2 pr-3">{fmtData(v.data_pedido)}</td>
+                  <td className="py-2 pr-3">{v.numero || "—"}</td>
+                  <td className="py-2 pr-3">{v.canal || "—"}</td>
+                  <td className="py-2 pr-3">{v.cliente_nome || "—"}</td>
+                  <td className="py-2 pr-3 text-right">{(v.itens || []).length}{c.semSku ? " ⚠" : ""}</td>
+                  <td className="py-2 pr-3 text-right">{BRL(c.receita)}</td>
+                  <td className="py-2 pr-3 text-right">{BRL(c.custo)}</td>
+                  <td className="py-2 pr-3 text-right">{BRL(c.taxas)}</td>
+                  <td className="py-2 pr-3 text-right">{BRL(c.imposto)}</td>
+                  <td className="py-2 pr-3 text-right" style={{ color: c.lucro >= 0 ? "#2E7D4F" : "#B4462F", fontWeight: 500 }}>{BRL(c.lucro)}</td>
+                  <td className="py-2 pr-3 text-right">{isFinite(c.margem) ? c.margem.toFixed(0) + "%" : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-[11px] mt-3" style={{ color: "#B5A98F" }}>
+            ⚠ = algum item sem SKU correspondente no seu catalogo (custo nao calculado para ele). Cadastre/ajuste o SKU do produto para o lucro ficar completo.
+          </p>
         </div>
       )}
     </div>
