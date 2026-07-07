@@ -796,19 +796,19 @@ export default function App() {
 
   return (
     <div className="min-h-screen" style={{ background: "#F5EFE2", color: "#221F1A", fontFamily: "'Avenir Next','Segoe UI',system-ui,sans-serif" }}>
-      <header style={{ background: "#1A1815" }}>
+      <header style={{ background: "linear-gradient(120deg,#241C15 0%,#3C2519 55%,#5E2F1B 100%)", borderTop: "4px solid #B4690E" }}>
         <div className="max-w-6xl mx-auto px-4 py-5 flex items-end justify-between flex-wrap gap-3">
           <div>
-            <p className="text-xs tracking-[0.2em] uppercase" style={{ color: "#B5A98F" }}>Galuno Artesanato</p>
+            <p className="text-xs tracking-[0.2em] uppercase" style={{ color: "#E8C468" }}>Galuno Artesanato</p>
             <h1 className="text-2xl font-bold text-white">Sistema de Precificação</h1>
           </div>
-          <p className="text-xs" style={{ color: salvo ? "#B5A98F" : "#E8C468" }}>{salvo ? "✓ Tudo salvo" : "Salvando…"}</p>
+          <p className="text-xs font-medium px-3 py-1 rounded-full" style={{ background: salvo ? "rgba(46,125,79,0.25)" : "rgba(232,196,104,0.25)", color: salvo ? "#8FD6A8" : "#E8C468" }}>{salvo ? "✓ Tudo salvo" : "Salvando…"}</p>
         </div>
         <nav className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
           {[["produtos", "Produtos e Preços"], ["tempo-real", "Vendas"], ["financeiro", "Financeiro"], ["relatorios", "Relatórios"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["rh", "RH"], ["marketplaces", "Marketplaces"], ["usuarios", "Usuários"], ["ajuda", "Como usar"]].filter(([k]) => abasVisiveis.includes(k)).map(([k, l]) => (
             <button key={k} onClick={() => { setTab(k); setProdAberto(null); }}
               className="px-4 py-2.5 text-sm font-medium rounded-t-lg whitespace-nowrap"
-              style={tab === k ? { background: "#F5EFE2", color: "#1A1815" } : { color: "#D8CFBC" }}>
+              style={tab === k ? { background: "#F5EFE2", color: "#8A3B1E", boxShadow: "inset 0 3px 0 #B4690E" } : { color: "#D8CFBC" }}>
               {l}
             </button>
           ))}
@@ -2197,6 +2197,93 @@ function empresaDoSku(sku) {
 }
 
 // ============ VENDAS (Tiny) — filtros e empresa ============
+// ====== Cores, gráficos (SVG puro, sem dependências) e helpers ======
+const PALETA = ["#B4462F", "#2E7D4F", "#B4690E", "#3E6B8C", "#7A5AA0", "#C99A2E", "#4A8C7A", "#A0524A"];
+
+function corSituacao(sit) {
+  const t = String(sit || "").toLowerCase();
+  if (t.includes("entreg") && !t.includes("nao") && !t.includes("não")) return { bg: "#E4F1E8", fg: "#2E7D4F" };
+  if (t.includes("envi")) return { bg: "#E3EDF6", fg: "#2F5E8C" };
+  if (t.includes("aprov")) return { bg: "#E5F0EC", fg: "#2E7D6F" };
+  if (t.includes("aberto")) return { bg: "#FBF0D9", fg: "#9A6B12" };
+  if (t.includes("cancel") || t.includes("devolv")) return { bg: "#F7E3DF", fg: "#B4462F" };
+  return { bg: "#EEE9DF", fg: "#6E675C" };
+}
+
+function parseDataFlex(s) {
+  if (!s) return null;
+  const str = String(s).trim();
+  if (!str) return null;
+  let m = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+  return null;
+}
+
+const cardBox = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
+
+function Pizza({ dados, titulo }) {
+  const validos = (dados || []).filter((d) => d.valor > 0);
+  const total = validos.reduce((s, d) => s + d.valor, 0);
+  const cx = 70, cy = 70, r = 62;
+  let ang = -90;
+  const arcos = validos.map((d, i) => {
+    const frac = d.valor / (total || 1);
+    const a0 = ang, a1 = ang + frac * 360; ang = a1;
+    const large = frac > 0.5 ? 1 : 0;
+    const rad = (a) => [cx + r * Math.cos((a * Math.PI) / 180), cy + r * Math.sin((a * Math.PI) / 180)];
+    const [x0, y0] = rad(a0), [x1, y1] = rad(a1);
+    const path = validos.length === 1
+      ? `M${cx - r},${cy} a${r},${r} 0 1,0 ${r * 2},0 a${r},${r} 0 1,0 ${-r * 2},0`
+      : `M${cx},${cy} L${x0.toFixed(2)},${y0.toFixed(2)} A${r},${r} 0 ${large} 1 ${x1.toFixed(2)},${y1.toFixed(2)} Z`;
+    return { path, cor: d.cor || PALETA[i % PALETA.length], label: d.label, pct: frac * 100 };
+  });
+  return (
+    <div style={cardBox}>
+      <p className="text-sm font-semibold mb-2" style={{ color: "#4A443A" }}>{titulo}</p>
+      {total === 0 ? <p className="text-xs" style={{ color: "#948B7C" }}>Sem dados.</p> : (
+        <div className="flex items-center gap-3">
+          <svg width="140" height="140" viewBox="0 0 140 140" style={{ flexShrink: 0 }}>
+            {arcos.map((a, i) => <path key={i} d={a.path} fill={a.cor} stroke="#FFF" strokeWidth="1.5" />)}
+            <circle cx={cx} cy={cy} r="28" fill="#FFF" />
+          </svg>
+          <div className="flex-1 space-y-1 min-w-0">
+            {arcos.map((a, i) => (
+              <div key={i} className="flex items-center gap-2 text-xs">
+                <span style={{ width: 10, height: 10, borderRadius: 2, background: a.cor, display: "inline-block", flexShrink: 0 }} />
+                <span className="flex-1 truncate" style={{ color: "#6E675C" }}>{a.label}</span>
+                <span className="font-medium" style={{ color: "#4A443A" }}>{a.pct.toFixed(0)}%</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Torre({ dados, titulo, cor = "#B4690E", formato }) {
+  const fmt = formato || ((n) => String(Math.round(n)));
+  const max = Math.max(...(dados || []).map((d) => d.valor), 1);
+  return (
+    <div style={cardBox}>
+      <p className="text-sm font-semibold mb-3" style={{ color: "#4A443A" }}>{titulo}</p>
+      {(!dados || dados.length === 0) ? <p className="text-xs" style={{ color: "#948B7C" }}>Sem dados.</p> : (
+        <div className="flex items-end gap-1" style={{ height: 150 }}>
+          {dados.map((d, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center justify-end min-w-0" title={d.label + ": " + fmt(d.valor)}>
+              <span className="text-[9px] mb-1 whitespace-nowrap" style={{ color: "#6E675C" }}>{d.valor > 0 ? fmt(d.valor) : ""}</span>
+              <div style={{ width: "78%", height: Math.max(2, (d.valor / max) * 110), background: d.cor || cor, borderRadius: "3px 3px 0 0" }} />
+              <span className="text-[9px] mt-1 truncate w-full text-center" style={{ color: "#948B7C" }}>{d.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function VendasTiny({ produtos, insumos, marketplaces }) {
   const [vendas, setVendas] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -2316,8 +2403,8 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
         || (prod && String(prod.nome || "").toLowerCase().includes(q));
     });
   }
-  const linhas = enriquecidas.filter(({ v, emp, grupo }) => {
-    if (filtro === "pagos" && !ehPaga(v.situacao)) return false;
+  // linhasBase = passa em todos os filtros MENOS o de situação (usado nos gráficos por situação)
+  const linhasBase = enriquecidas.filter(({ v, emp, grupo }) => {
     if (empresa !== "todas" && emp !== empresa) return false;
     if (canalF !== "todos" && grupo !== canalF) return false;
     if (dataIni && String(v.data_pedido || "") < dataIni) return false;
@@ -2325,11 +2412,56 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
     if (!matchBusca(v)) return false;
     return true;
   });
+  const linhas = filtro === "pagos" ? linhasBase.filter(({ v }) => ehPaga(v.situacao)) : linhasBase;
   const tot = linhas.reduce((s, { c }) => ({
     receita: s.receita + c.receita, faturamento: s.faturamento + c.faturamento, custo: s.custo + c.custo, taxas: s.taxas + c.taxas,
     imposto: s.imposto + c.imposto, lucro: s.lucro + c.lucro,
   }), { receita: 0, faturamento: 0, custo: 0, taxas: 0, imposto: 0, lucro: 0 });
   const margemMedia = tot.receita ? (tot.lucro / tot.receita) * 100 : 0;
+
+  // ====== dados dos gráficos ======
+  const BRLk = (n) => "R$ " + (Math.abs(n) >= 1000 ? (n / 1000).toFixed(1) + "k" : n.toFixed(0));
+  const porMarket = (() => {
+    const m = {};
+    linhas.forEach(({ v, c }) => { const g = grupoCanal(v.canal); m[g] = (m[g] || 0) + c.faturamento; });
+    return Object.entries(m).map(([label, valor]) => ({ label, valor })).sort((a, b) => b.valor - a.valor);
+  })();
+  const porSituacao = (() => {
+    const m = {};
+    linhasBase.forEach(({ v }) => { const s = v.situacao || "—"; m[s] = (m[s] || 0) + 1; });
+    return Object.entries(m).map(([label, valor]) => ({ label, valor, cor: corSituacao(label).fg })).sort((a, b) => b.valor - a.valor);
+  })();
+  const porDia = (() => {
+    const m = {};
+    linhas.forEach(({ v, c }) => { const d = v.data_pedido; if (d) m[d] = (m[d] || 0) + c.faturamento; });
+    return Object.entries(m).sort((a, b) => a[0].localeCompare(b[0])).slice(-14)
+      .map(([d, valor]) => ({ label: d.slice(8, 10) + "/" + d.slice(5, 7), valor }));
+  })();
+
+  // ====== previsão de recebimento (dias após entrega, por marketplace) ======
+  const hoje0 = new Date(); hoje0.setHours(0, 0, 0, 0);
+  const recebiveis = linhasBase
+    .filter(({ v }) => { const t = String(v.situacao || "").toLowerCase(); return (t.includes("aprov") || t.includes("envi") || t.includes("entreg")) && !t.includes("cancel") && !t.includes("devolv"); })
+    .map(({ v, c }) => {
+      const prazo = c.mp ? (num(c.mp.prazoDias) || 15) : 15;
+      const dEntrega = parseDataFlex(v.payload_raw && v.payload_raw.data_entrega);
+      const dEnvio = parseDataFlex(v.payload_raw && v.payload_raw.data_envio);
+      let entrega;
+      if (dEntrega) entrega = dEntrega;
+      else if (dEnvio) { entrega = new Date(dEnvio); entrega.setDate(entrega.getDate() + 5); }
+      else { const dp = parseDataFlex(v.data_pedido) || hoje0; entrega = new Date(dp); entrega.setDate(entrega.getDate() + 8); }
+      const receb = new Date(entrega); receb.setDate(receb.getDate() + prazo);
+      return { receb, liquido: num(v.valor_total) - c.taxas, estimado: !dEntrega };
+    });
+  const totalReceber = recebiveis.reduce((s, r) => s + r.liquido, 0);
+  const receber7 = recebiveis.filter((r) => { const dif = (r.receb - hoje0) / 86400000; return dif >= 0 && dif <= 7; }).reduce((s, r) => s + r.liquido, 0);
+  const segundaDe = (d) => { const x = new Date(d); const w = (x.getDay() + 6) % 7; x.setDate(x.getDate() - w); x.setHours(0, 0, 0, 0); return x; };
+  const porSemana = (() => {
+    const m = {};
+    recebiveis.forEach((r) => { const k = segundaDe(r.receb).getTime(); m[k] = (m[k] || 0) + r.liquido; });
+    return Object.entries(m).map(([k, valor]) => ({ k: +k, valor })).sort((a, b) => a.k - b.k).slice(0, 8)
+      .map((x) => { const d = new Date(x.k); return { label: String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0"), valor: x.valor }; });
+  })();
 
   const card = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
   const ctrl = { borderColor: "#E4DCCB", background: "#FFFFFF" };
@@ -2378,6 +2510,35 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
         <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Margem media</p><p className="text-lg font-semibold">{isFinite(margemMedia) ? margemMedia.toFixed(1) + "%" : "—"}</p></div>
         <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>N de vendas</p><p className="text-lg font-semibold">{linhas.length}</p></div>
       </div>
+
+      {!carregando && linhas.length > 0 && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
+            <div style={{ ...card, borderLeft: "4px solid #2E7D4F" }}>
+              <p className="text-xs" style={{ color: "#948B7C" }}>A receber (previsto, líquido)</p>
+              <p className="text-lg font-semibold" style={{ color: "#2E7D4F" }}>{BRL(totalReceber)}</p>
+            </div>
+            <div style={{ ...card, borderLeft: "4px solid #B4690E" }}>
+              <p className="text-xs" style={{ color: "#948B7C" }}>Entra nos próximos 7 dias</p>
+              <p className="text-lg font-semibold" style={{ color: "#B4690E" }}>{BRL(receber7)}</p>
+            </div>
+            <div style={{ ...card, borderLeft: "4px solid #3E6B8C" }}>
+              <p className="text-xs" style={{ color: "#948B7C" }}>Pedidos a receber</p>
+              <p className="text-lg font-semibold" style={{ color: "#3E6B8C" }}>{recebiveis.length}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
+            <Torre titulo="Recebimentos previstos por semana" dados={porSemana} cor="#2E7D4F" formato={BRLk} />
+            <Torre titulo="Faturamento por dia" dados={porDia} cor="#B4690E" formato={BRLk} />
+            <Pizza titulo="Faturamento por marketplace" dados={porMarket} />
+            <Pizza titulo="Pedidos por situação" dados={porSituacao} />
+          </div>
+          <p className="text-[11px] mb-4" style={{ color: "#B5A98F" }}>
+            Recebimento previsto = data de entrega + prazo do marketplace (editável em Marketplaces). Enquanto a entrega não é confirmada pelo Tiny, a data é estimada. Cancelados/devolvidos ficam de fora.
+          </p>
+        </>
+      )}
+
       {carregando ? (
         <p className="text-sm" style={{ color: "#948B7C" }}>Carregando vendas...</p>
       ) : linhas.length === 0 ? (
@@ -2400,7 +2561,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
                   <td className="py-2 pr-3">{v.numero || "—"}</td>
                   <td className="py-2 pr-3"><span className="px-2 py-0.5 rounded text-[11px]" style={{ background: emp === "ROUTER" ? "#E8EEF6" : "#F3ECDD", color: "#4A443A" }}>{emp}</span></td>
                   <td className="py-2 pr-3">{v.canal || "—"}</td>
-                  <td className="py-2 pr-3">{v.situacao || "—"}</td>
+                  <td className="py-2 pr-3"><span className="px-2 py-0.5 rounded text-[11px] whitespace-nowrap" style={{ background: corSituacao(v.situacao).bg, color: corSituacao(v.situacao).fg }}>{v.situacao || "—"}</span></td>
                   <td className="py-2 pr-3">{v.cliente_nome || "—"}</td>
                   <td className="py-2 pr-3 text-right">{(v.itens || []).length}{c.semSku ? " ⚠" : ""}</td>
                   <td className="py-2 pr-3 text-right">{BRL(c.receita)}</td>
