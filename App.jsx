@@ -2280,7 +2280,11 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
       }
     }
     const lucro = receita - custo - taxas - imposto;
-    return { receita, custo, taxas, imposto, lucro, margem: receita ? (lucro / receita) * 100 : 0, mp, semSku };
+    // Faturamento igual ao Tiny, SEM frete = total do pedido (valor_total) menos o frete.
+    // receita/custo/lucro/margem continuam por item (base de custo); faturamento é a linha de topo.
+    const frete = num(v.payload_raw && v.payload_raw.valor_frete);
+    const faturamento = num(v.valor_total) - frete;
+    return { receita, faturamento, custo, taxas, imposto, lucro, margem: receita ? (lucro / receita) * 100 : 0, mp, semSku };
   }
 
   const enriquecidas = useMemo(() => vendas.map((v) => ({
@@ -2308,9 +2312,9 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
     return true;
   });
   const tot = linhas.reduce((s, { c }) => ({
-    receita: s.receita + c.receita, custo: s.custo + c.custo, taxas: s.taxas + c.taxas,
+    receita: s.receita + c.receita, faturamento: s.faturamento + c.faturamento, custo: s.custo + c.custo, taxas: s.taxas + c.taxas,
     imposto: s.imposto + c.imposto, lucro: s.lucro + c.lucro,
-  }), { receita: 0, custo: 0, taxas: 0, imposto: 0, lucro: 0 });
+  }), { receita: 0, faturamento: 0, custo: 0, taxas: 0, imposto: 0, lucro: 0 });
   const margemMedia = tot.receita ? (tot.lucro / tot.receita) * 100 : 0;
 
   const card = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
@@ -2355,7 +2359,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
       </div>
       {erro && <p className="text-sm mb-3" style={{ color: "#B4462F" }}>Erro: {erro}</p>}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Faturamento</p><p className="text-lg font-semibold">{BRL(tot.receita)}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Faturamento <span title="Total do pedido (valor_total) sem o frete — igual ao Tiny">ⓘ</span></p><p className="text-lg font-semibold">{BRL(tot.faturamento)}</p></div>
         <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Lucro</p><p className="text-lg font-semibold" style={{ color: tot.lucro >= 0 ? "#2E7D4F" : "#B4462F" }}>{BRL(tot.lucro)}</p></div>
         <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Margem media</p><p className="text-lg font-semibold">{isFinite(margemMedia) ? margemMedia.toFixed(1) + "%" : "—"}</p></div>
         <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>N de vendas</p><p className="text-lg font-semibold">{linhas.length}</p></div>
