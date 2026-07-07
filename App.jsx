@@ -566,12 +566,12 @@ function parseBRL(v) {
   return isNaN(n) ? 0 : n;
 }
 const inputCls = "border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 w-full";
-const inputStyle = { borderColor: "#D8D0BF", color: "#221F1A" };
+const inputStyle = { borderColor: "#D8D0BF", color: "#111827" };
 const miniInput = "border rounded-md px-2 py-1 text-sm bg-white w-full text-right";
 
 const Field = ({ label, children, w }) => (
   <label className="flex flex-col gap-1" style={{ width: w }}>
-    <span className="text-xs font-medium" style={{ color: "#6E675C" }}>{label}</span>
+    <span className="text-xs font-medium" style={{ color: "#6B7280" }}>{label}</span>
     {children}
   </label>
 );
@@ -599,9 +599,9 @@ function Modal({ title, onClose, children }) {
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4"
       style={{ background: "rgba(28,32,26,0.45)" }} onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg my-8" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "#EAE3D3" }}>
-          <h3 className="font-semibold" style={{ color: "#221F1A" }}>{title}</h3>
-          <button onClick={onClose} className="text-2xl leading-none px-1" style={{ color: "#948B7C" }} aria-label="Fechar">×</button>
+        <div className="flex items-center justify-between px-5 py-4 border-b" style={{ borderColor: "#E5E7EB" }}>
+          <h3 className="font-semibold" style={{ color: "#111827" }}>{title}</h3>
+          <button onClick={onClose} className="text-2xl leading-none px-1" style={{ color: "#9CA3AF" }} aria-label="Fechar">×</button>
         </div>
         <div className="p-5">{children}</div>
       </div>
@@ -666,8 +666,8 @@ export default function App() {
 
   if (!data)
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: "#F5EFE2" }}>
-        <p style={{ color: "#6E675C" }}>Carregando seus dados…</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#F4F5F7" }}>
+        <p style={{ color: "#6B7280" }}>Carregando seus dados…</p>
       </div>
     );
 
@@ -795,20 +795,20 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: "#F5EFE2", color: "#221F1A", fontFamily: "'Avenir Next','Segoe UI',system-ui,sans-serif" }}>
-      <header style={{ background: "linear-gradient(120deg,#241C15 0%,#3C2519 55%,#5E2F1B 100%)", borderTop: "4px solid #B4690E" }}>
+    <div className="min-h-screen" style={{ background: "#F4F5F7", color: "#111827", fontFamily: "'Avenir Next','Segoe UI',system-ui,sans-serif" }}>
+      <header style={{ background: "#0F172A", borderBottom: "1px solid #1E293B" }}>
         <div className="max-w-6xl mx-auto px-4 py-5 flex items-end justify-between flex-wrap gap-3">
           <div>
-            <p className="text-xs tracking-[0.2em] uppercase" style={{ color: "#E8C468" }}>Galuno Artesanato</p>
-            <h1 className="text-2xl font-bold text-white">Sistema de Precificação</h1>
+            <p className="text-xs tracking-[0.2em] uppercase" style={{ color: "#94A3B8" }}>Galuno Artesanato</p>
+            <h1 className="text-2xl font-semibold text-white">Sistema de Precificação</h1>
           </div>
-          <p className="text-xs font-medium px-3 py-1 rounded-full" style={{ background: salvo ? "rgba(46,125,79,0.25)" : "rgba(232,196,104,0.25)", color: salvo ? "#8FD6A8" : "#E8C468" }}>{salvo ? "✓ Tudo salvo" : "Salvando…"}</p>
+          <p className="text-xs font-medium px-3 py-1 rounded-full" style={{ background: salvo ? "rgba(22,163,74,0.18)" : "rgba(245,158,11,0.18)", color: salvo ? "#86EFAC" : "#FCD34D" }}>{salvo ? "✓ Tudo salvo" : "Salvando…"}</p>
         </div>
         <nav className="max-w-6xl mx-auto px-4 flex gap-1 overflow-x-auto">
           {[["produtos", "Produtos e Preços"], ["tempo-real", "Vendas"], ["financeiro", "Financeiro"], ["relatorios", "Relatórios"], ["estoque", "Estoque"], ["insumos", "Insumos"], ["fornecedores", "Fornecedores"], ["fabricas", "Fábricas"], ["rh", "RH"], ["marketplaces", "Marketplaces"], ["usuarios", "Usuários"], ["ajuda", "Como usar"]].filter(([k]) => abasVisiveis.includes(k)).map(([k, l]) => (
             <button key={k} onClick={() => { setTab(k); setProdAberto(null); }}
               className="px-4 py-2.5 text-sm font-medium rounded-t-lg whitespace-nowrap"
-              style={tab === k ? { background: "#F5EFE2", color: "#8A3B1E", boxShadow: "inset 0 3px 0 #B4690E" } : { color: "#D8CFBC" }}>
+              style={tab === k ? { background: "#F4F5F7", color: "#1D4ED8", boxShadow: "inset 0 2px 0 #2563EB" } : { color: "#94A3B8" }}>
               {l}
             </button>
           ))}
@@ -818,7 +818,7 @@ export default function App() {
       {erro && (
         <div className="max-w-6xl mx-auto px-4 mt-4">
           <div className="rounded-lg px-4 py-3 text-sm flex justify-between gap-4"
-            style={{ background: "#FBEFE3", color: "#7A4A12", border: "1px solid #E8C99F" }}>
+            style={{ background: "#FEF3C7", color: "#92400E", border: "1px solid #FDE68A" }}>
             <span>{erro}</span>
             <button onClick={() => setErro("")} className="font-bold">×</button>
           </div>
@@ -837,7 +837,7 @@ export default function App() {
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
               />
-              <button disabled={soPreco} onClick={novoProduto} className="px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm" style={{ background: "#B4690E" }}>
+              <button disabled={soPreco} onClick={novoProduto} className="px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm" style={{ background: "#2563EB" }}>
                 + Novo produto
               </button>
             </div>
@@ -849,35 +849,35 @@ export default function App() {
                 const custo = custoProduto(p, insumos);
                 const pc = pesoConsiderado(p);
                 return (
-                  <div key={p.id} className="bg-white rounded-2xl p-4 shadow-sm border hover:shadow-md transition-shadow relative group" style={{ borderColor: "#E3DBC9" }}>
+                  <div key={p.id} className="bg-white rounded-2xl p-4 shadow-sm border hover:shadow-md transition-shadow relative group" style={{ borderColor: "#E5E7EB" }}>
                     <button onClick={() => setProdAberto(p.id)} className="text-left w-full">
                       <div className="flex items-start gap-2 mb-2 pr-8">
-                        {p.sku && <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded whitespace-nowrap" style={{ background: "#EFE9DA", color: "#4A443A" }}>{p.sku}</span>}
+                        {p.sku && <span className="text-xs font-mono font-semibold px-2 py-0.5 rounded whitespace-nowrap" style={{ background: "#EEF2F7", color: "#374151" }}>{p.sku}</span>}
                         <p className="font-semibold leading-tight">{p.nome}</p>
                       </div>
                       <div className="flex items-baseline justify-between text-sm">
-                        <span style={{ color: "#6E675C" }}>Custo de produção</span>
-                        <span className="text-lg font-bold" style={{ color: "#B4690E" }}>{BRL(custo)}</span>
+                        <span style={{ color: "#6B7280" }}>Custo de produção</span>
+                        <span className="text-lg font-bold" style={{ color: "#2563EB" }}>{BRL(custo)}</span>
                       </div>
-                      <p className="text-xs mt-1" style={{ color: "#948B7C" }}>
+                      <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>
                         {(p.itens || []).length} insumo(s) · peso considerado {KG(pc)}
                       </p>
                     </button>
                     <button onClick={(e) => { e.stopPropagation(); duplicarProduto(p); }}
                       title="Duplicar produto"
                       className="absolute top-3 right-3 w-7 h-7 rounded-lg flex items-center justify-center text-sm"
-                      style={{ background: "#EFE9DA", color: "#4A443A" }}
+                      style={{ background: "#EEF2F7", color: "#374151" }}
                       aria-label="Duplicar produto">+</button>
                   </div>
                 );
               })}
               {!produtos.length && (
-                <div className="sm:col-span-2 bg-white rounded-2xl p-8 text-center border" style={{ borderColor: "#E3DBC9", color: "#6E675C" }}>
+                <div className="sm:col-span-2 bg-white rounded-2xl p-8 text-center border" style={{ borderColor: "#E5E7EB", color: "#6B7280" }}>
                   Nenhum produto ainda. Toque em "+ Novo produto" para começar.
                 </div>
               )}
               {produtos.length > 0 && (
-                <p className="sm:col-span-2 text-xs text-center" style={{ color: "#948B7C" }}>
+                <p className="sm:col-span-2 text-xs text-center" style={{ color: "#9CA3AF" }}>
                   {produtos.filter((p) => ((p.sku || "") + " " + p.nome).toLowerCase().includes(busca.toLowerCase())).length} de {produtos.length} produtos
                   {!busca && produtos.length > 40 ? " — mostrando os 40 primeiros, use a busca para encontrar os demais" : ""}
                 </p>
@@ -897,9 +897,9 @@ export default function App() {
           const precoDireta = divDireta > 0 ? custo / divDireta : NaN;
           return (
             <div className="space-y-5">
-              <button onClick={() => setProdAberto(null)} className="text-sm font-medium" style={{ color: "#1A1815" }}>← Voltar aos produtos</button>
+              <button onClick={() => setProdAberto(null)} className="text-sm font-medium" style={{ color: "#1F2937" }}>← Voltar aos produtos</button>
 
-              <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E3DBC9" }}>
+              <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
                 <div className="flex flex-wrap gap-3 items-end justify-between">
                   <div className="flex flex-wrap gap-3 items-end">
                     <Field label="SKU / Código" w="140px">
@@ -920,7 +920,7 @@ export default function App() {
                   </div>
                   <div className="flex gap-2" style={{ display: soPreco ? "none" : "flex" }}>
                     <button onClick={() => duplicarProduto(prod)}
-                      className="text-sm px-3 py-2 rounded-lg border" style={{ color: "#4A443A", borderColor: "#D8D0BF" }}>
+                      className="text-sm px-3 py-2 rounded-lg border" style={{ color: "#374151", borderColor: "#D8D0BF" }}>
                       Duplicar
                     </button>
                     <ConfirmButton label="Excluir produto" confirmLabel="Toque de novo para confirmar"
@@ -931,15 +931,15 @@ export default function App() {
               </div>
 
               {/* ficha técnica */}
-              <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E3DBC9" }}>
+              <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
                 <h3 className="font-semibold mb-1">Ficha técnica</h3>
-                <p className="text-xs mb-4" style={{ color: "#948B7C" }}>O que entra em 1 unidade deste produto. Os custos vêm do cadastro de insumos.</p>
+                <p className="text-xs mb-4" style={{ color: "#9CA3AF" }}>O que entra em 1 unidade deste produto. Os custos vêm do cadastro de insumos.</p>
                 <div className="space-y-2">
                   {(prod.itens || []).map((it) => {
                     const ins = insumos.find((i) => i.id === it.insumoId);
                     const sub = ins ? custoUnit(ins) * num(it.qtd) : 0;
                     return (
-                      <div key={it.id} className="flex flex-wrap items-center gap-2 rounded-xl px-3 py-2" style={{ background: "#F8F3E9" }}>
+                      <div key={it.id} className="flex flex-wrap items-center gap-2 rounded-xl px-3 py-2" style={{ background: "#F8FAFC" }}>
                         <select className={inputCls + " flex-1 min-w-[180px]"} style={inputStyle} disabled={soPreco} value={it.insumoId}
                           onChange={(e) => setProduto(prod.id, { itens: prod.itens.map((x) => x.id === it.id ? { ...x, insumoId: e.target.value } : x) })}>
                           {insumos.map((i) => <option key={i.id} value={i.id}>{i.codigo} — {i.descricao}</option>)}
@@ -947,7 +947,7 @@ export default function App() {
                         <div className="flex items-center gap-1">
                           <input type="number" step="any" className={inputCls + " w-24 text-right"} style={inputStyle} disabled={soPreco} value={it.qtd}
                             onChange={(e) => setProduto(prod.id, { itens: prod.itens.map((x) => x.id === it.id ? { ...x, qtd: e.target.value } : x) })} />
-                          <span className="text-xs w-8" style={{ color: "#948B7C" }}>{ins?.unidUso}</span>
+                          <span className="text-xs w-8" style={{ color: "#9CA3AF" }}>{ins?.unidUso}</span>
                         </div>
                         <span className="text-sm font-semibold w-24 text-right">{BRL(sub)}</span>
                         <button disabled={soPreco} onClick={() => setProduto(prod.id, { itens: prod.itens.filter((x) => x.id !== it.id) })}
@@ -961,12 +961,12 @@ export default function App() {
                     onClick={() => insumos.length
                       ? setProduto(prod.id, { itens: [...(prod.itens || []), { id: uid(), insumoId: insumos[0].id, qtd: 1 }] })
                       : setErro("Cadastre pelo menos um insumo primeiro (aba Insumos).")}
-                    className="text-sm font-semibold px-3 py-2 rounded-lg" style={{ color: "#1A1815", background: "#EFE8D9" }}>
+                    className="text-sm font-semibold px-3 py-2 rounded-lg" style={{ color: "#1F2937", background: "#EEF2F7" }}>
                     + Adicionar insumo
                   </button>
                   <div className="flex items-center gap-3 flex-wrap">
                     {!(prod.itens || []).length && (
-                      <label className="flex items-center gap-2 text-xs" style={{ color: "#6E675C" }}>
+                      <label className="flex items-center gap-2 text-xs" style={{ color: "#6B7280" }}>
                         Custo importado da planilha (R$)
                         <input type="number" step="any" className={inputCls + " w-28 text-right"} style={inputStyle} disabled={soPreco}
                           value={prod.custoManual}
@@ -977,16 +977,16 @@ export default function App() {
                   </div>
                 </div>
                 {!(prod.itens || []).length && (
-                  <p className="text-xs mt-2" style={{ color: "#948B7C" }}>
+                  <p className="text-xs mt-2" style={{ color: "#9CA3AF" }}>
                     Este produto usa o custo importado da sua planilha. Se você adicionar insumos na ficha técnica, o custo passa a ser calculado por eles.
                   </p>
                 )}
               </div>
 
               {/* embalagem e peso */}
-              <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E3DBC9" }}>
+              <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
                 <h3 className="font-semibold mb-1">Pacote embalado</h3>
-                <p className="text-xs mb-4" style={{ color: "#948B7C" }}>
+                <p className="text-xs mb-4" style={{ color: "#9CA3AF" }}>
                   Medidas do pacote pronto para envio. Peso cúbico = comprimento × largura × altura ÷ 6000. O frete usa sempre o maior entre peso bruto e cúbico.
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
@@ -998,15 +998,15 @@ export default function App() {
                   ))}
                 </div>
                 <div className="grid sm:grid-cols-3 gap-3 text-sm">
-                  <div className="rounded-xl px-4 py-3" style={{ background: !cubicoMaior && bruto > 0 ? "#EFE8D9" : "#F8F3E9", border: !cubicoMaior && bruto > 0 ? "1px solid #CBBEA0" : "1px solid #EAE3D3" }}>
-                    <p className="text-xs" style={{ color: "#6E675C" }}>Peso bruto</p>
+                  <div className="rounded-xl px-4 py-3" style={{ background: !cubicoMaior && bruto > 0 ? "#EEF2F7" : "#F8FAFC", border: !cubicoMaior && bruto > 0 ? "1px solid #CBBEA0" : "1px solid #E5E7EB" }}>
+                    <p className="text-xs" style={{ color: "#6B7280" }}>Peso bruto</p>
                     <p className="font-bold">{KG(bruto)}</p>
                   </div>
-                  <div className="rounded-xl px-4 py-3" style={{ background: cubicoMaior ? "#EFE8D9" : "#F8F3E9", border: cubicoMaior ? "1px solid #CBBEA0" : "1px solid #EAE3D3" }}>
-                    <p className="text-xs" style={{ color: "#6E675C" }}>Peso cúbico (C×L×A ÷ 6000)</p>
+                  <div className="rounded-xl px-4 py-3" style={{ background: cubicoMaior ? "#EEF2F7" : "#F8FAFC", border: cubicoMaior ? "1px solid #CBBEA0" : "1px solid #E5E7EB" }}>
+                    <p className="text-xs" style={{ color: "#6B7280" }}>Peso cúbico (C×L×A ÷ 6000)</p>
                     <p className="font-bold">{KG(cubico)}</p>
                   </div>
-                  <div className="rounded-xl px-4 py-3" style={{ background: "#1A1815", color: "#fff" }}>
+                  <div className="rounded-xl px-4 py-3" style={{ background: "#1F2937", color: "#fff" }}>
                     <p className="text-xs" style={{ color: "#D8CFBC" }}>Peso considerado {cubicoMaior ? "→ cúbico venceu" : bruto > 0 ? "→ bruto venceu" : ""}</p>
                     <p className="font-bold" style={{ color: "#F0C05A" }}>{KG(pc)}</p>
                   </div>
@@ -1014,13 +1014,13 @@ export default function App() {
               </div>
 
               {/* precificação por marketplace */}
-              <div className="rounded-2xl p-5 shadow-sm border" style={{ background: "#1A1815", borderColor: "#1A1815" }}>
+              <div className="rounded-2xl p-5 shadow-sm border" style={{ background: "#1F2937", borderColor: "#1F2937" }}>
                 <h3 className="font-semibold mb-4 text-white">Precificação por canal</h3>
                 <div className="grid grid-cols-2 gap-3 mb-5 max-w-sm">
                   {[["margem", "Margem de lucro (%)"], ["imposto", "Imposto (%)"]].map(([k, l]) => (
                     <label key={k} className="flex flex-col gap-1">
                       <span className="text-xs" style={{ color: "#D8CFBC" }}>{l}</span>
-                      <input type="number" step="any" className="rounded-lg px-3 py-2 text-sm bg-white" style={{ color: "#221F1A" }}
+                      <input type="number" step="any" className="rounded-lg px-3 py-2 text-sm bg-white" style={{ color: "#111827" }}
                         value={prod[k]} onChange={(e) => setProduto(prod.id, { [k]: e.target.value })} />
                     </label>
                   ))}
@@ -1038,19 +1038,19 @@ export default function App() {
                       {marketplaces.map((m) => {
                         const r = calcMarketplace(m, custo, num(prod.margem), num(prod.imposto), pc);
                         return (
-                          <tr key={m.id} className="border-t" style={{ borderColor: "#4A4438" }}>
+                          <tr key={m.id} className="border-t" style={{ borderColor: "#374151" }}>
                             <td className="px-4 py-3 font-semibold text-white">{m.nome}</td>
                             <td className="px-4 py-3 text-right" style={{ color: "#D8CFBC" }}>
                               {isNaN(r.taxas) ? "rever %" : BRL(r.taxas)}
-                              {r.frete > 0 && <span className="block text-xs" style={{ color: "#B5A98F" }}>inclui frete {BRL(r.frete)} ({KG(pc)})</span>}
+                              {r.frete > 0 && <span className="block text-xs" style={{ color: "#9CA3AF" }}>inclui frete {BRL(r.frete)} ({KG(pc)})</span>}
                             </td>
                             <td className="px-4 py-3 text-right text-white">{isNaN(r.lucro) ? "—" : BRL(r.lucro)}</td>
                             <td className="px-4 py-3 text-right text-lg font-bold" style={{ color: "#F0C05A" }}>{isNaN(r.preco) ? "rever %" : BRL(r.preco)}</td>
                           </tr>
                         );
                       })}
-                      <tr className="border-t" style={{ borderColor: "#4A4438" }}>
-                        <td className="px-4 py-3 font-semibold text-white">Venda direta <span className="text-xs font-normal" style={{ color: "#B5A98F" }}>(sem marketplace)</span></td>
+                      <tr className="border-t" style={{ borderColor: "#374151" }}>
+                        <td className="px-4 py-3 font-semibold text-white">Venda direta <span className="text-xs font-normal" style={{ color: "#9CA3AF" }}>(sem marketplace)</span></td>
                         <td className="px-4 py-3 text-right" style={{ color: "#D8CFBC" }}>R$ 0,00</td>
                         <td className="px-4 py-3 text-right text-white">{isNaN(precoDireta) ? "—" : BRL(precoDireta * num(prod.margem) / 100)}</td>
                         <td className="px-4 py-3 text-right text-lg font-bold text-white">{isNaN(precoDireta) ? "rever %" : BRL(precoDireta)}</td>
@@ -1058,7 +1058,7 @@ export default function App() {
                     </tbody>
                   </table>
                 </div>
-                <p className="text-xs mt-3" style={{ color: "#B5A98F" }}>
+                <p className="text-xs mt-3" style={{ color: "#9CA3AF" }}>
                   Preço = (custo + frete do canal + taxa fixa) ÷ (1 − margem − imposto − comissão %). A faixa de comissão é escolhida automaticamente pelo preço final. Edite as taxas na aba Marketplaces.
                 </p>
               </div>
@@ -1080,9 +1080,9 @@ export default function App() {
             <div className="space-y-5">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[["Lucro hoje", lucroHoje], ["Lucro 7 dias", lucro7], ["Lucro no mês", lucroMes], ["A receber (líquido)", aReceber]].map(([l, v]) => (
-                  <div key={l} className="bg-white rounded-2xl p-4 shadow-sm border" style={{ borderColor: "#E3DBC9" }}>
-                    <p className="text-xs" style={{ color: "#6E675C" }}>{l}</p>
-                    <p className="text-xl font-bold" style={{ color: v >= 0 ? "#1A1815" : "#A33B2E" }}>{BRL(v)}</p>
+                  <div key={l} className="bg-white rounded-2xl p-4 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
+                    <p className="text-xs" style={{ color: "#6B7280" }}>{l}</p>
+                    <p className="text-xl font-bold" style={{ color: v >= 0 ? "#1F2937" : "#A33B2E" }}>{BRL(v)}</p>
                   </div>
                 ))}
               </div>
@@ -1095,10 +1095,10 @@ export default function App() {
 
               <VendaForm produtos={produtos} marketplaces={marketplaces} insumos={insumos} onSave={registrarVenda} />
 
-              <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E3DBC9" }}>
+              <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E5E7EB" }}>
                 <table className="w-full text-sm min-w-[760px]">
                   <thead>
-                    <tr style={{ background: "#EFE9DA", color: "#4A443A" }}>
+                    <tr style={{ background: "#EEF2F7", color: "#374151" }}>
                       {["Data", "Produto", "Canal", "Qtd", "Receita", "Taxas+Imp.", "Lucro", "Recebimento", ""].map((h) => (
                         <th key={h} className="text-left px-3 py-3 font-semibold">{h}</th>
                       ))}
@@ -1111,14 +1111,14 @@ export default function App() {
                       return (
                         <tr key={v.id} className="border-t" style={{ borderColor: "#EFE9DC" }}>
                           <td className="px-3 py-2 whitespace-nowrap">{fmtData(v.data)}</td>
-                          <td className="px-3 py-2"><span className="font-mono text-xs font-semibold mr-1" style={{ color: "#4A443A" }}>{v.sku}</span>{v.nomeProduto}</td>
+                          <td className="px-3 py-2"><span className="font-mono text-xs font-semibold mr-1" style={{ color: "#374151" }}>{v.sku}</span>{v.nomeProduto}</td>
                           <td className="px-3 py-2">{v.canalNome}</td>
                           <td className="px-3 py-2">{v.qtd}</td>
                           <td className="px-3 py-2">{BRL(r.receita)}</td>
-                          <td className="px-3 py-2" style={{ color: "#6E675C" }}>{BRL(r.taxas + r.imposto)}</td>
-                          <td className="px-3 py-2 font-semibold" style={{ color: r.lucro >= 0 ? "#1A1815" : "#A33B2E" }}>{BRL(r.lucro)}</td>
+                          <td className="px-3 py-2" style={{ color: "#6B7280" }}>{BRL(r.taxas + r.imposto)}</td>
+                          <td className="px-3 py-2 font-semibold" style={{ color: r.lucro >= 0 ? "#1F2937" : "#A33B2E" }}>{BRL(r.lucro)}</td>
                           <td className="px-3 py-2 whitespace-nowrap">
-                            <span className="text-xs px-2 py-0.5 rounded-full" style={recebido ? { background: "#EFE8D9", color: "#4A4438" } : { background: "#FBEFE3", color: "#7A4A12" }}>
+                            <span className="text-xs px-2 py-0.5 rounded-full" style={recebido ? { background: "#EEF2F7", color: "#374151" } : { background: "#FEF3C7", color: "#92400E" }}>
                               {recebido ? "✓ " : "→ "}{fmtData(v.recebimento)}
                             </span>
                           </td>
@@ -1127,12 +1127,12 @@ export default function App() {
                       );
                     })}
                     {!vendas.length && (
-                      <tr><td colSpan={9} className="px-4 py-8 text-center" style={{ color: "#6E675C" }}>Nenhuma venda registrada ainda. Use o formulário acima — o lucro e a data de recebimento são calculados automaticamente.</td></tr>
+                      <tr><td colSpan={9} className="px-4 py-8 text-center" style={{ color: "#6B7280" }}>Nenhuma venda registrada ainda. Use o formulário acima — o lucro e a data de recebimento são calculados automaticamente.</td></tr>
                     )}
                   </tbody>
                 </table>
               </div>
-              <p className="text-xs" style={{ color: "#948B7C" }}>Cada venda congela o custo e as taxas do momento do registro, baixa o estoque do produto automaticamente, e projeta o recebimento pelo prazo configurado na aba Marketplaces. Excluir uma venda devolve o estoque.</p>
+              <p className="text-xs" style={{ color: "#9CA3AF" }}>Cada venda congela o custo e as taxas do momento do registro, baixa o estoque do produto automaticamente, e projeta o recebimento pelo prazo configurado na aba Marketplaces. Excluir uma venda devolve o estoque.</p>
             </div>
           );
         })()}
@@ -1164,24 +1164,24 @@ export default function App() {
           return (
             <div className="space-y-5">
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[["Entradas do mês (manuais)", entradasMes, "#1A1815"], ["Vendas recebidas no mês", recebidoVendasMes, "#1A1815"], ["Saídas do mês", saidasMes, "#A33B2E"], ["A receber de vendas", aReceber, "#7A4A12"]].map(([l, v, c]) => (
-                  <div key={l} className="bg-white rounded-2xl p-4 shadow-sm border" style={{ borderColor: "#E3DBC9" }}>
-                    <p className="text-xs" style={{ color: "#6E675C" }}>{l}</p>
+                {[["Entradas do mês (manuais)", entradasMes, "#1F2937"], ["Vendas recebidas no mês", recebidoVendasMes, "#1F2937"], ["Saídas do mês", saidasMes, "#A33B2E"], ["A receber de vendas", aReceber, "#92400E"]].map(([l, v, c]) => (
+                  <div key={l} className="bg-white rounded-2xl p-4 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
+                    <p className="text-xs" style={{ color: "#6B7280" }}>{l}</p>
                     <p className="text-xl font-bold" style={{ color: c }}>{BRL(v)}</p>
                   </div>
                 ))}
               </div>
-              <div className="rounded-2xl p-4 shadow-sm" style={{ background: "#1A1815" }}>
-                <p className="text-xs" style={{ color: "#B5A98F" }}>Saldo geral (entradas manuais + vendas recebidas − saídas)</p>
+              <div className="rounded-2xl p-4 shadow-sm" style={{ background: "#1F2937" }}>
+                <p className="text-xs" style={{ color: "#9CA3AF" }}>Saldo geral (entradas manuais + vendas recebidas − saídas)</p>
                 <p className="text-2xl font-bold" style={{ color: "#F0C05A" }}>{BRL(saldoGeral)}</p>
               </div>
 
               <LancamentoForm onSave={addLancamento} />
 
-              <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E3DBC9" }}>
+              <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E5E7EB" }}>
                 <table className="w-full text-sm min-w-[560px]">
                   <thead>
-                    <tr style={{ background: "#EFE9DA", color: "#4A443A" }}>
+                    <tr style={{ background: "#EEF2F7", color: "#374151" }}>
                       {["Data", "Descrição", "Categoria", "Tipo", "Valor", ""].map((h) => (
                         <th key={h} className="text-left px-3 py-3 font-semibold">{h}</th>
                       ))}
@@ -1192,18 +1192,18 @@ export default function App() {
                       <tr key={l.id} className="border-t" style={{ borderColor: "#EFE9DC" }}>
                         <td className="px-3 py-2 whitespace-nowrap">{fmtData(l.data)}</td>
                         <td className="px-3 py-2">{l.descricao}</td>
-                        <td className="px-3 py-2" style={{ color: "#6E675C" }}>{l.categoria || "—"}</td>
+                        <td className="px-3 py-2" style={{ color: "#6B7280" }}>{l.categoria || "—"}</td>
                         <td className="px-3 py-2">
-                          <span className="text-xs px-2 py-0.5 rounded-full" style={l.tipo === "entrada" ? { background: "#EFE8D9", color: "#4A4438" } : { background: "#FBE7E3", color: "#A33B2E" }}>
+                          <span className="text-xs px-2 py-0.5 rounded-full" style={l.tipo === "entrada" ? { background: "#EEF2F7", color: "#374151" } : { background: "#FBE7E3", color: "#A33B2E" }}>
                             {l.tipo === "entrada" ? "Entrada" : "Saída"}
                           </span>
                         </td>
-                        <td className="px-3 py-2 font-semibold" style={{ color: l.tipo === "entrada" ? "#1A1815" : "#A33B2E" }}>{l.tipo === "saida" ? "− " : "+ "}{BRL(num(l.valor))}</td>
+                        <td className="px-3 py-2 font-semibold" style={{ color: l.tipo === "entrada" ? "#1F2937" : "#A33B2E" }}>{l.tipo === "saida" ? "− " : "+ "}{BRL(num(l.valor))}</td>
                         <td className="px-3 py-2"><button className="text-lg" style={{ color: "#A33B2E" }} aria-label="Excluir lançamento" onClick={() => delLancamento(l.id)}>×</button></td>
                       </tr>
                     ))}
                     {!financeiro.length && (
-                      <tr><td colSpan={6} className="px-4 py-8 text-center" style={{ color: "#6E675C" }}>Nenhum lançamento. Registre entradas e saídas acima — as vendas dos marketplaces entram automaticamente quando o recebimento vence.</td></tr>
+                      <tr><td colSpan={6} className="px-4 py-8 text-center" style={{ color: "#6B7280" }}>Nenhum lançamento. Registre entradas e saídas acima — as vendas dos marketplaces entram automaticamente quando o recebimento vence.</td></tr>
                     )}
                   </tbody>
                 </table>
@@ -1221,21 +1221,21 @@ export default function App() {
           const baixoIns = insumos.filter((i) => num(i.estoque) <= num(i.estoqueMin) && num(i.estoqueMin) > 0).length;
           const badge = (qtd, min) => num(min) > 0 && num(qtd) <= num(min)
             ? <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#FBE7E3", color: "#A33B2E" }}>Baixo</span>
-            : <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#EFE8D9", color: "#4A4438" }}>OK</span>;
+            : <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "#EEF2F7", color: "#374151" }}>OK</span>;
           return (
             <div className="space-y-5">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <input className={inputCls + " max-w-xs"} style={inputStyle} placeholder="Buscar produto ou insumo…" value={busca} onChange={(e) => setBusca(e.target.value)} />
-                <p className="text-sm" style={{ color: (baixoProd + baixoIns) ? "#A33B2E" : "#6E675C" }}>
+                <p className="text-sm" style={{ color: (baixoProd + baixoIns) ? "#A33B2E" : "#6B7280" }}>
                   {(baixoProd + baixoIns) ? `⚠ ${baixoProd + baixoIns} item(ns) abaixo do mínimo` : "Todos os itens acima do mínimo"}
                 </p>
               </div>
 
-              <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E3DBC9" }}>
-                <p className="px-4 pt-4 font-semibold">Produtos prontos <span className="text-xs font-normal" style={{ color: "#948B7C" }}>— vendas registradas baixam o estoque automaticamente</span></p>
+              <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E5E7EB" }}>
+                <p className="px-4 pt-4 font-semibold">Produtos prontos <span className="text-xs font-normal" style={{ color: "#9CA3AF" }}>— vendas registradas baixam o estoque automaticamente</span></p>
                 <table className="w-full text-sm min-w-[560px]">
                   <thead>
-                    <tr style={{ color: "#6E675C" }}>
+                    <tr style={{ color: "#6B7280" }}>
                       {["SKU", "Produto", "Em estoque", "Mínimo", "Status"].map((h) => <th key={h} className="text-left px-4 py-2 font-medium">{h}</th>)}
                     </tr>
                   </thead>
@@ -1253,14 +1253,14 @@ export default function App() {
                     ))}
                   </tbody>
                 </table>
-                {!busca && prodsF.length > 30 && <p className="px-4 pb-3 text-xs" style={{ color: "#948B7C" }}>Mostrando 30 de {prodsF.length} — use a busca.</p>}
+                {!busca && prodsF.length > 30 && <p className="px-4 pb-3 text-xs" style={{ color: "#9CA3AF" }}>Mostrando 30 de {prodsF.length} — use a busca.</p>}
               </div>
 
-              <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E3DBC9" }}>
+              <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E5E7EB" }}>
                 <p className="px-4 pt-4 font-semibold">Matéria-prima e insumos</p>
                 <table className="w-full text-sm min-w-[560px]">
                   <thead>
-                    <tr style={{ color: "#6E675C" }}>
+                    <tr style={{ color: "#6B7280" }}>
                       {["Código", "Insumo", "Em estoque", "Mínimo", "Status"].map((h) => <th key={h} className="text-left px-4 py-2 font-medium">{h}</th>)}
                     </tr>
                   </thead>
@@ -1270,7 +1270,7 @@ export default function App() {
                         <td className="px-4 py-2 font-mono text-xs font-semibold">{i.codigo}</td>
                         <td className="px-4 py-2">{i.descricao}</td>
                         <td className="px-4 py-2 whitespace-nowrap"><input type="number" step="any" className={miniInput + " w-24"} style={inputStyle} value={i.estoque}
-                          onChange={(e) => setInsumoCampo(i.id, { estoque: e.target.value })} /> <span className="text-xs" style={{ color: "#948B7C" }}>{i.unidUso}</span></td>
+                          onChange={(e) => setInsumoCampo(i.id, { estoque: e.target.value })} /> <span className="text-xs" style={{ color: "#9CA3AF" }}>{i.unidUso}</span></td>
                         <td className="px-4 py-2"><input type="number" step="any" className={miniInput + " w-24"} style={inputStyle} value={i.estoqueMin}
                           onChange={(e) => setInsumoCampo(i.id, { estoqueMin: e.target.value })} /></td>
                         <td className="px-4 py-2">{badge(i.estoque, i.estoqueMin)}</td>
@@ -1287,22 +1287,22 @@ export default function App() {
         {tab === "insumos" && (
           <>
             <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-              <p className="text-sm" style={{ color: "#6E675C" }}>Preço mudou no fornecedor? Atualize aqui e <strong>todos os produtos recalculam sozinhos</strong>.</p>
-              <button onClick={() => setEditInsumo("novo")} className="px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm" style={{ background: "#B4690E" }}>
+              <p className="text-sm" style={{ color: "#6B7280" }}>Preço mudou no fornecedor? Atualize aqui e <strong>todos os produtos recalculam sozinhos</strong>.</p>
+              <button onClick={() => setEditInsumo("novo")} className="px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm" style={{ background: "#2563EB" }}>
                 + Novo insumo
               </button>
             </div>
             <div className="mb-4 flex items-center justify-between flex-wrap gap-2">
               <input className={inputCls + " max-w-xs"} style={inputStyle} placeholder="Buscar por código ou descrição…"
                 value={busca} onChange={(e) => setBusca(e.target.value)} />
-              <span className="text-xs" style={{ color: "#948B7C" }}>
+              <span className="text-xs" style={{ color: "#9CA3AF" }}>
                 {insumos.filter((i) => (i.codigo + " " + i.descricao).toLowerCase().includes(busca.toLowerCase())).length} de {insumos.length} insumos
               </span>
             </div>
-            <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E3DBC9" }}>
+            <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E5E7EB" }}>
               <table className="w-full text-sm min-w-[640px]">
                 <thead>
-                  <tr style={{ background: "#EFE9DA", color: "#4A443A" }}>
+                  <tr style={{ background: "#EEF2F7", color: "#374151" }}>
                     {["Código", "Descrição", "Fornecedor", "Compra", "Preço", "Rende", "Custo por unid. de uso", ""].map((h) => (
                       <th key={h} className="text-left px-4 py-3 font-semibold">{h}</th>
                     ))}
@@ -1312,14 +1312,14 @@ export default function App() {
                   {insumos.filter((i) => (i.codigo + " " + i.descricao + " " + nomeFornecedor(i.fornecedorId)).toLowerCase().includes(busca.toLowerCase())).map((i) => (
                     <tr key={i.id} className="border-t" style={{ borderColor: "#EFE9DC" }}>
                       <td className="px-4 py-3 font-mono text-xs font-semibold">{i.codigo}</td>
-                      <td className="px-4 py-3">{i.descricao}<span className="block text-xs" style={{ color: "#948B7C" }}>{i.categoria}{i._auto ? " · calculado na aba Fábricas" : ""}</span></td>
-                      <td className="px-4 py-3 text-xs" style={{ color: "#6E675C" }}>{nomeFornecedor(i.fornecedorId) || "—"}</td>
-                      <td className="px-4 py-3" style={{ color: "#6E675C" }}>1 {i.unidCompra}</td>
+                      <td className="px-4 py-3">{i.descricao}<span className="block text-xs" style={{ color: "#9CA3AF" }}>{i.categoria}{i._auto ? " · calculado na aba Fábricas" : ""}</span></td>
+                      <td className="px-4 py-3 text-xs" style={{ color: "#6B7280" }}>{nomeFornecedor(i.fornecedorId) || "—"}</td>
+                      <td className="px-4 py-3" style={{ color: "#6B7280" }}>1 {i.unidCompra}</td>
                       <td className="px-4 py-3">{BRL(num(i.preco))}</td>
-                      <td className="px-4 py-3" style={{ color: "#6E675C" }}>{i.rendimento} {i.unidUso}</td>
-                      <td className="px-4 py-3 font-semibold" style={{ color: "#1A1815" }}>{BRL4(custoUnit(i))} / {i.unidUso}</td>
+                      <td className="px-4 py-3" style={{ color: "#6B7280" }}>{i.rendimento} {i.unidUso}</td>
+                      <td className="px-4 py-3 font-semibold" style={{ color: "#1F2937" }}>{BRL4(custoUnit(i))} / {i.unidUso}</td>
                       <td className="px-4 py-3 text-right whitespace-nowrap">
-                        <button onClick={() => setEditInsumo(i)} className="text-sm font-medium mr-3" style={{ color: "#1A1815" }}>Editar</button>
+                        <button onClick={() => setEditInsumo(i)} className="text-sm font-medium mr-3" style={{ color: "#1F2937" }}>Editar</button>
                         <button onClick={() => excluirInsumo(i.id)} className="text-sm" style={{ color: "#A33B2E" }}>Excluir</button>
                       </td>
                     </tr>
@@ -1334,8 +1334,8 @@ export default function App() {
         {tab === "fornecedores" && (
           <>
             <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-              <p className="text-sm" style={{ color: "#6E675C" }}>Cadastre seus fornecedores aqui. Cada insumo pode ser vinculado a um deles na tela de edição.</p>
-              <button onClick={() => setEditForn("novo")} className="px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm" style={{ background: "#B4690E" }}>
+              <p className="text-sm" style={{ color: "#6B7280" }}>Cadastre seus fornecedores aqui. Cada insumo pode ser vinculado a um deles na tela de edição.</p>
+              <button onClick={() => setEditForn("novo")} className="px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm" style={{ background: "#2563EB" }}>
                 + Novo fornecedor
               </button>
             </div>
@@ -1343,24 +1343,24 @@ export default function App() {
               {fornecedores.map((f) => {
                 const qtd = insumos.filter((i) => i.fornecedorId === f.id).length;
                 return (
-                  <div key={f.id} className="bg-white rounded-2xl p-4 shadow-sm border" style={{ borderColor: "#E3DBC9" }}>
+                  <div key={f.id} className="bg-white rounded-2xl p-4 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <p className="font-semibold">{f.nome}</p>
-                        {f.contato && <p className="text-sm" style={{ color: "#6E675C" }}>{f.contato}</p>}
-                        {f.obs && <p className="text-xs mt-1" style={{ color: "#948B7C" }}>{f.obs}</p>}
+                        {f.contato && <p className="text-sm" style={{ color: "#6B7280" }}>{f.contato}</p>}
+                        {f.obs && <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>{f.obs}</p>}
                       </div>
-                      <span className="text-xs px-2 py-1 rounded-full whitespace-nowrap" style={{ background: "#EFE8D9", color: "#4A4438" }}>{qtd} insumo{qtd === 1 ? "" : "s"}</span>
+                      <span className="text-xs px-2 py-1 rounded-full whitespace-nowrap" style={{ background: "#EEF2F7", color: "#374151" }}>{qtd} insumo{qtd === 1 ? "" : "s"}</span>
                     </div>
                     <div className="flex gap-3 mt-3">
-                      <button onClick={() => setEditForn(f)} className="text-sm font-medium" style={{ color: "#1A1815" }}>Editar</button>
+                      <button onClick={() => setEditForn(f)} className="text-sm font-medium" style={{ color: "#1F2937" }}>Editar</button>
                       <button onClick={() => excluirFornecedor(f)} className="text-sm" style={{ color: "#A33B2E" }}>Excluir</button>
                     </div>
                   </div>
                 );
               })}
               {!fornecedores.length && (
-                <div className="sm:col-span-2 bg-white rounded-2xl p-8 text-center border" style={{ borderColor: "#E3DBC9", color: "#6E675C" }}>
+                <div className="sm:col-span-2 bg-white rounded-2xl p-8 text-center border" style={{ borderColor: "#E5E7EB", color: "#6B7280" }}>
                   Nenhum fornecedor cadastrado. Toque em "+ Novo fornecedor".
                 </div>
               )}
@@ -1371,7 +1371,7 @@ export default function App() {
         {/* ============ FÁBRICAS ============ */}
         {tab === "fabricas" && (
           <div className="space-y-5">
-            <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBF6E9", border: "1px solid #E8D9A8", color: "#6B5A1E" }}>
+            <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#475569" }}>
               Aqui você calcula o <strong>custo por minuto de cada máquina</strong> e o custo de montagem. Esses valores alimentam automaticamente os insumos de produção (CORTELASER, CORTEROUTER, MONTCILINDRO) — então, ao ajustar qualquer coisa aqui, todos os produtos que usam corte/montagem recalculam sozinhos.
             </div>
 
@@ -1381,15 +1381,15 @@ export default function App() {
               const totColab = totalColaboradores(fab.colaboradores);
               const cMont = custoMontagem(fab);
               return (
-                <div key={fab.id} className="bg-white rounded-2xl shadow-sm border" style={{ borderColor: "#E3DBC9" }}>
-                  <div className="px-5 py-4 border-b flex items-center justify-between flex-wrap gap-2" style={{ borderColor: "#EAE3D3" }}>
+                <div key={fab.id} className="bg-white rounded-2xl shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
+                  <div className="px-5 py-4 border-b flex items-center justify-between flex-wrap gap-2" style={{ borderColor: "#E5E7EB" }}>
                     <div>
                       <h3 className="font-semibold text-lg">{fab.nome}</h3>
-                      <p className="text-xs" style={{ color: "#948B7C" }}>{(fab.colaboradores || []).length} colaboradores · {fab.maquinas} máquina(s)</p>
+                      <p className="text-xs" style={{ color: "#9CA3AF" }}>{(fab.colaboradores || []).length} colaboradores · {fab.maquinas} máquina(s)</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-xs" style={{ color: "#6E675C" }}>Custo da máquina</p>
-                      <p className="text-lg font-bold" style={{ color: "#B4690E" }}>{BRL4(cMin)}/min <span className="text-sm font-normal" style={{ color: "#948B7C" }}>· {BRL(cHora)}/h</span></p>
+                      <p className="text-xs" style={{ color: "#6B7280" }}>Custo da máquina</p>
+                      <p className="text-lg font-bold" style={{ color: "#2563EB" }}>{BRL4(cMin)}/min <span className="text-sm font-normal" style={{ color: "#9CA3AF" }}>· {BRL(cHora)}/h</span></p>
                     </div>
                   </div>
 
@@ -1409,8 +1409,8 @@ export default function App() {
                       const somaFixos = (fab.fixosDetalhe || []).reduce((s, x) => s + (x.auto === "colaboradores" ? totColab : num(x.valor)), 0);
                       const bate = Math.abs(somaFixos - num(fab.custosFixos)) < 0.5;
                       return (
-                        <details className="rounded-xl" style={{ background: "#F8F3E9" }}>
-                          <summary className="px-4 py-3 cursor-pointer text-sm font-semibold" style={{ color: "#4A443A" }}>
+                        <details className="rounded-xl" style={{ background: "#F8FAFC" }}>
+                          <summary className="px-4 py-3 cursor-pointer text-sm font-semibold" style={{ color: "#374151" }}>
                             Detalhamento dos custos fixos — soma {BRL(somaFixos)} {bate ? "✓" : "(≠ do valor acima)"}
                           </summary>
                           <div className="px-4 pb-4 space-y-2">
@@ -1419,7 +1419,7 @@ export default function App() {
                                 <input className={inputCls + " flex-1"} style={inputStyle} value={x.nome}
                                   onChange={(e) => setFab(fab.id, { fixosDetalhe: fab.fixosDetalhe.map((y) => y.id === x.id ? { ...y, nome: e.target.value } : y) })} />
                                 {x.auto === "colaboradores" ? (
-                                  <span className="w-32 text-right text-sm px-3 py-2 rounded-lg" style={{ background: "#EFE8D9", color: "#4A4438" }} title="Vem da tabela de colaboradores">
+                                  <span className="w-32 text-right text-sm px-3 py-2 rounded-lg" style={{ background: "#EEF2F7", color: "#374151" }} title="Vem da tabela de colaboradores">
                                     {BRL(totColab)} 🔗
                                   </span>
                                 ) : (
@@ -1431,18 +1431,18 @@ export default function App() {
                               </div>
                             ))}
                             <div className="flex items-center justify-between flex-wrap gap-2 pt-1">
-                              <button className="text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1A1815", background: "#EFE8D9" }}
+                              <button className="text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1F2937", background: "#EEF2F7" }}
                                 onClick={() => setFab(fab.id, { fixosDetalhe: [...(fab.fixosDetalhe || []), { id: uid(), nome: "Novo custo fixo", valor: 0 }] })}>
                                 + Adicionar custo fixo
                               </button>
                               {!bate && (
-                                <button className="text-sm font-semibold px-3 py-1.5 rounded-lg text-white" style={{ background: "#B4690E" }}
+                                <button className="text-sm font-semibold px-3 py-1.5 rounded-lg text-white" style={{ background: "#2563EB" }}
                                   onClick={() => setFab(fab.id, { custosFixos: somaFixos })}>
                                   Usar {BRL(somaFixos)} como custo fixo
                                 </button>
                               )}
                             </div>
-                            <p className="text-xs" style={{ color: "#948B7C" }}>A linha "Total Colaboradores" 🔗 é somada automaticamente da tabela de colaboradores abaixo. O total detalhado pode ser diferente do campo "Custos fixos" acima se você usa um valor ajustado (ex.: ROUTER exclui a equipe de montagem, cobrada à parte).</p>
+                            <p className="text-xs" style={{ color: "#9CA3AF" }}>A linha "Total Colaboradores" 🔗 é somada automaticamente da tabela de colaboradores abaixo. O total detalhado pode ser diferente do campo "Custos fixos" acima se você usa um valor ajustado (ex.: ROUTER exclui a equipe de montagem, cobrada à parte).</p>
                           </div>
                         </details>
                       );
@@ -1453,7 +1453,7 @@ export default function App() {
                       <p className="text-sm font-semibold mb-2">Custos adicionais</p>
                       <div className="space-y-2">
                         {(fab.extras || []).map((e) => (
-                          <div key={e.id} className="flex flex-wrap items-center gap-2 rounded-lg px-3 py-2" style={{ background: "#F8F3E9" }}>
+                          <div key={e.id} className="flex flex-wrap items-center gap-2 rounded-lg px-3 py-2" style={{ background: "#F8FAFC" }}>
                             <input className={inputCls + " flex-1 min-w-[140px]"} style={inputStyle} value={e.nome}
                               onChange={(ev) => setFab(fab.id, { extras: fab.extras.map((x) => x.id === e.id ? { ...x, nome: ev.target.value } : x) })} />
                             <select className={inputCls + " w-32"} style={inputStyle} value={e.tipo}
@@ -1473,14 +1473,14 @@ export default function App() {
                           </div>
                         ))}
                       </div>
-                      <button className="mt-2 text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1A1815", background: "#EFE8D9" }}
+                      <button className="mt-2 text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1F2937", background: "#EEF2F7" }}
                         onClick={() => setFab(fab.id, { extras: [...(fab.extras || []), { id: uid(), nome: "Novo custo", tipo: "horas", valorHora: 0 }] })}>
                         + Adicionar custo
                       </button>
                     </div>
 
                     {/* memória de cálculo */}
-                    <div className="rounded-xl p-4 text-sm" style={{ background: "#1A1815", color: "#D8CFBC" }}>
+                    <div className="rounded-xl p-4 text-sm" style={{ background: "#1F2937", color: "#D8CFBC" }}>
                       <p className="font-semibold text-white mb-2">Como o custo/minuto é calculado</p>
                       <p>Custos fixos ÷ {fab.diasMes} dias ÷ {fab.horasDia}h ÷ 60 = {BRL4(num(fab.custosFixos) / (num(fab.diasMes) || 22) / (num(fab.horasDia) || 1) / 60)}/min</p>
                       {(fab.extras || []).map((e) => (
@@ -1491,14 +1491,14 @@ export default function App() {
                     </div>
 
                     {/* colaboradores */}
-                    <details className="rounded-xl" style={{ background: "#F8F3E9" }}>
-                      <summary className="px-4 py-3 cursor-pointer text-sm font-semibold" style={{ color: "#4A443A" }}>
+                    <details className="rounded-xl" style={{ background: "#F8FAFC" }}>
+                      <summary className="px-4 py-3 cursor-pointer text-sm font-semibold" style={{ color: "#374151" }}>
                         Colaboradores da fábrica — total {BRL(totColab)}/mês ({(fab.colaboradores || []).length})
                       </summary>
                       <div className="px-4 pb-4 overflow-x-auto">
                         <table className="w-full text-sm min-w-[520px]">
                           <thead>
-                            <tr style={{ color: "#6E675C" }}>
+                            <tr style={{ color: "#6B7280" }}>
                               {["Nome", "Cargo", "Salário", "Encargos", "Bônus", "Total", ""].map((h) => (
                                 <th key={h} className="text-left px-2 py-2 font-medium">{h}</th>
                               ))}
@@ -1506,7 +1506,7 @@ export default function App() {
                           </thead>
                           <tbody>
                             {(fab.colaboradores || []).map((c) => (
-                              <tr key={c.id} className="border-t" style={{ borderColor: "#E3DBC9" }}>
+                              <tr key={c.id} className="border-t" style={{ borderColor: "#E5E7EB" }}>
                                 <td className="px-2 py-1"><input className={miniInput + " text-left"} style={inputStyle} value={c.nome}
                                   onChange={(e) => setFab(fab.id, { colaboradores: fab.colaboradores.map((x) => x.id === c.id ? { ...x, nome: e.target.value } : x) })} /></td>
                                 <td className="px-2 py-1"><input className={miniInput + " text-left"} style={inputStyle} value={c.cargo}
@@ -1521,7 +1521,7 @@ export default function App() {
                             ))}
                           </tbody>
                         </table>
-                        <button className="mt-2 text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1A1815", background: "#EFE8D9" }}
+                        <button className="mt-2 text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1F2937", background: "#EEF2F7" }}
                           onClick={() => setFab(fab.id, { colaboradores: [...(fab.colaboradores || []), { id: uid(), nome: "Novo colaborador", cargo: "", salario: 0, encargos: 0, bonus: 0, total: 0 }] })}>
                           + Adicionar colaborador
                         </button>
@@ -1530,26 +1530,26 @@ export default function App() {
 
                     {/* montagem opcional */}
                     {fab.montagem && (
-                      <div className="rounded-xl p-4" style={{ background: "#EFE8D9" }}>
+                      <div className="rounded-xl p-4" style={{ background: "#EEF2F7" }}>
                         <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-                          <p className="text-sm font-semibold" style={{ color: "#4A4438" }}>{fab.montagem.nome}</p>
-                          <p className="text-sm">Custo: <strong style={{ color: "#B4690E" }}>{BRL4(cMont)}</strong> / un (insumo {fab.montagem.insumoCodigo})</p>
+                          <p className="text-sm font-semibold" style={{ color: "#374151" }}>{fab.montagem.nome}</p>
+                          <p className="text-sm">Custo: <strong style={{ color: "#2563EB" }}>{BRL4(cMont)}</strong> / un (insumo {fab.montagem.insumoCodigo})</p>
                         </div>
                         <div className="flex items-center gap-3 flex-wrap text-sm">
-                          <label className="flex items-center gap-2" style={{ color: "#6E675C" }}>
+                          <label className="flex items-center gap-2" style={{ color: "#6B7280" }}>
                             Média produzida por dia
                             <input type="number" step="any" className={inputCls + " w-24 text-right"} style={inputStyle} value={fab.montagem.mediaDia}
                               onChange={(e) => setFab(fab.id, { montagem: { ...fab.montagem, mediaDia: e.target.value } })} />
                           </label>
-                          <span style={{ color: "#6E675C" }}>
+                          <span style={{ color: "#6B7280" }}>
                             Total equipe {BRL(totalColaboradores(fab.montagem.colaboradores))}/mês ÷ ({fab.montagem.mediaDia} × {fab.diasMes} dias)
                           </span>
                         </div>
                         <details className="mt-2">
-                          <summary className="cursor-pointer text-xs font-semibold" style={{ color: "#1A1815" }}>Ver equipe de montagem ({(fab.montagem.colaboradores || []).length})</summary>
+                          <summary className="cursor-pointer text-xs font-semibold" style={{ color: "#1F2937" }}>Ver equipe de montagem ({(fab.montagem.colaboradores || []).length})</summary>
                           <div className="mt-2 overflow-x-auto">
                             <table className="w-full text-sm min-w-[520px]">
-                              <thead><tr style={{ color: "#6E675C" }}>{["Nome", "Cargo", "Total", ""].map((h) => <th key={h} className="text-left px-2 py-1 font-medium">{h}</th>)}</tr></thead>
+                              <thead><tr style={{ color: "#6B7280" }}>{["Nome", "Cargo", "Total", ""].map((h) => <th key={h} className="text-left px-2 py-1 font-medium">{h}</th>)}</tr></thead>
                               <tbody>
                                 {(fab.montagem.colaboradores || []).map((c) => (
                                   <tr key={c.id} className="border-t" style={{ borderColor: "#DED5C0" }}>
@@ -1565,7 +1565,7 @@ export default function App() {
                                 ))}
                               </tbody>
                             </table>
-                            <button className="mt-2 text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1A1815", background: "#fff" }}
+                            <button className="mt-2 text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1F2937", background: "#fff" }}
                               onClick={() => setFab(fab.id, { montagem: { ...fab.montagem, colaboradores: [...(fab.montagem.colaboradores || []), { id: uid(), nome: "Novo", cargo: "", salario: 0, encargos: 0, bonus: 0, total: 0 }] } })}>
                               + Adicionar à equipe
                             </button>
@@ -1583,18 +1583,18 @@ export default function App() {
         {/* ============ MARKETPLACES ============ */}
         {tab === "marketplaces" && (
           <div className="space-y-4">
-            <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBF6E9", border: "1px solid #E8D9A8", color: "#6B5A1E" }}>
+            <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#475569" }}>
               As taxas abaixo vieram das políticas públicas dos marketplaces (jul/2026). <strong>Confira com a sua "Tabela de apoio"</strong> de cada canal e ajuste — principalmente a tabela de frete por peso do Mercado Livre, que varia por reputação e categoria.
             </div>
             {marketplaces.map((m) => {
               const aberto = mktAberto === m.id;
               const faixas = [...(m.faixas || [])].sort((a, b) => (a.ate == null ? 1 : b.ate == null ? -1 : num(a.ate) - num(b.ate)));
               return (
-                <div key={m.id} className="bg-white rounded-2xl shadow-sm border" style={{ borderColor: "#E3DBC9" }}>
+                <div key={m.id} className="bg-white rounded-2xl shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
                   <button className="w-full flex items-center justify-between px-5 py-4 text-left" onClick={() => setMktAberto(aberto ? null : m.id)}>
                     <div>
                       <p className="font-semibold">{m.nome}</p>
-                      <p className="text-xs" style={{ color: "#948B7C" }}>
+                      <p className="text-xs" style={{ color: "#9CA3AF" }}>
                         {faixas.map((f) => {
                           let txt = f.pct + "%";
                           if (num(f.fixo)) txt += " + " + BRL(num(f.fixo));
@@ -1605,26 +1605,26 @@ export default function App() {
                         {m.frete?.length ? "  ·  frete por peso (" + m.frete.length + " faixas)" : ""}
                       </p>
                     </div>
-                    <span className="text-xl" style={{ color: "#948B7C" }}>{aberto ? "−" : "+"}</span>
+                    <span className="text-xl" style={{ color: "#9CA3AF" }}>{aberto ? "−" : "+"}</span>
                   </button>
                   {aberto && (
                     <div className="px-5 pb-5 space-y-4">
-                      {m.nota && <p className="text-xs rounded-lg px-3 py-2" style={{ background: "#F8F3E9", color: "#6E675C" }}>{m.nota}</p>}
+                      {m.nota && <p className="text-xs rounded-lg px-3 py-2" style={{ background: "#F8FAFC", color: "#6B7280" }}>{m.nota}</p>}
 
                       <div className="flex flex-wrap gap-4">
                         <div className="max-w-xs">
-                          <label className="text-xs" style={{ color: "#6E675C" }}>Taxa extra sobre a venda (ex.: afiliados) — %
+                          <label className="text-xs" style={{ color: "#6B7280" }}>Taxa extra sobre a venda (ex.: afiliados) — %
                             <input className={miniInput} style={inputStyle} value={m.extraPct ?? 0}
                               onChange={(e) => setMkt(m.id, { extraPct: e.target.value })} />
                           </label>
-                          <p className="text-[11px] mt-1" style={{ color: "#948B7C" }}>Entra no preço final de todas as faixas. Deixe 0 se não usar.</p>
+                          <p className="text-[11px] mt-1" style={{ color: "#9CA3AF" }}>Entra no preço final de todas as faixas. Deixe 0 se não usar.</p>
                         </div>
                         <div className="max-w-xs">
-                          <label className="text-xs" style={{ color: "#6E675C" }}>Prazo de recebimento (dias após a venda)
+                          <label className="text-xs" style={{ color: "#6B7280" }}>Prazo de recebimento (dias após a venda)
                             <input className={miniInput} style={inputStyle} value={m.prazoDias ?? 14}
                               onChange={(e) => setMkt(m.id, { prazoDias: e.target.value })} />
                           </label>
-                          <p className="text-[11px] mt-1" style={{ color: "#948B7C" }}>Usado na aba Vendas para projetar quando o dinheiro cai.</p>
+                          <p className="text-[11px] mt-1" style={{ color: "#9CA3AF" }}>Usado na aba Vendas para projetar quando o dinheiro cai.</p>
                         </div>
                       </div>
 
@@ -1633,19 +1633,19 @@ export default function App() {
                         <div className="space-y-2">
                           {faixas.map((f) => (
                             <div key={f.id} className="grid grid-cols-[1fr_1fr_1fr_auto_auto] gap-2 items-center">
-                              <label className="text-xs" style={{ color: "#6E675C" }}>Preço até (R$)
+                              <label className="text-xs" style={{ color: "#6B7280" }}>Preço até (R$)
                                 <input className={miniInput} style={inputStyle} value={f.ate ?? ""} placeholder="acima (vazio)"
                                   onChange={(e) => setMkt(m.id, { faixas: m.faixas.map((x) => x.id === f.id ? { ...x, ate: e.target.value === "" ? null : e.target.value } : x) })} />
                               </label>
-                              <label className="text-xs" style={{ color: "#6E675C" }}>Comissão (%)
+                              <label className="text-xs" style={{ color: "#6B7280" }}>Comissão (%)
                                 <input className={miniInput} style={inputStyle} value={f.pct}
                                   onChange={(e) => setMkt(m.id, { faixas: m.faixas.map((x) => x.id === f.id ? { ...x, pct: e.target.value } : x) })} />
                               </label>
-                              <label className="text-xs" style={{ color: "#6E675C" }}>Taxa fixa (R$/item)
+                              <label className="text-xs" style={{ color: "#6B7280" }}>Taxa fixa (R$/item)
                                 <input className={miniInput} style={inputStyle} value={f.fixo}
                                   onChange={(e) => setMkt(m.id, { faixas: m.faixas.map((x) => x.id === f.id ? { ...x, fixo: e.target.value } : x) })} />
                               </label>
-                              <label className="text-xs flex flex-col items-center" style={{ color: "#6E675C" }}>Frete?
+                              <label className="text-xs flex flex-col items-center" style={{ color: "#6B7280" }}>Frete?
                                 <input type="checkbox" className="mt-2 w-4 h-4" checked={f.frete !== false}
                                   onChange={(e) => setMkt(m.id, { faixas: m.faixas.map((x) => x.id === f.id ? { ...x, frete: e.target.checked } : x) })} />
                               </label>
@@ -1654,24 +1654,24 @@ export default function App() {
                             </div>
                           ))}
                         </div>
-                        <button className="mt-2 text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1A1815", background: "#EFE8D9" }}
+                        <button className="mt-2 text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1F2937", background: "#EEF2F7" }}
                           onClick={() => setMkt(m.id, { faixas: [...(m.faixas || []), { id: uid(), ate: null, pct: 0, fixo: 0, frete: false }] })}>
                           + Adicionar faixa
                         </button>
-                        <p className="text-[11px] mt-1" style={{ color: "#948B7C" }}>A coluna "Frete?" define se aquela faixa cobra o frete da tabela abaixo (ex.: Mercado Livre só cobra frete acima de R$78,90).</p>
+                        <p className="text-[11px] mt-1" style={{ color: "#9CA3AF" }}>A coluna "Frete?" define se aquela faixa cobra o frete da tabela abaixo (ex.: Mercado Livre só cobra frete acima de R$78,90).</p>
                       </div>
 
                       <div>
                         <p className="text-sm font-semibold mb-1">Frete por peso considerado</p>
-                        <p className="text-xs mb-2" style={{ color: "#948B7C" }}>Cobrado do vendedor conforme o maior peso (bruto ou cúbico). Deixe vazio se o canal não cobra frete de você.</p>
+                        <p className="text-xs mb-2" style={{ color: "#9CA3AF" }}>Cobrado do vendedor conforme o maior peso (bruto ou cúbico). Deixe vazio se o canal não cobra frete de você.</p>
                         <div className="space-y-2 max-w-md">
                           {[...(m.frete || [])].sort((a, b) => (a.ate == null ? 1 : b.ate == null ? -1 : num(a.ate) - num(b.ate))).map((f) => (
                             <div key={f.id} className="grid grid-cols-[1fr_1fr_auto] gap-2 items-center">
-                              <label className="text-xs" style={{ color: "#6E675C" }}>Peso até (kg)
+                              <label className="text-xs" style={{ color: "#6B7280" }}>Peso até (kg)
                                 <input className={miniInput} style={inputStyle} value={f.ate ?? ""} placeholder="acima (vazio)"
                                   onChange={(e) => setMkt(m.id, { frete: m.frete.map((x) => x.id === f.id ? { ...x, ate: e.target.value === "" ? null : e.target.value } : x) })} />
                               </label>
-                              <label className="text-xs" style={{ color: "#6E675C" }}>Valor (R$)
+                              <label className="text-xs" style={{ color: "#6B7280" }}>Valor (R$)
                                 <input className={miniInput} style={inputStyle} value={f.valor}
                                   onChange={(e) => setMkt(m.id, { frete: m.frete.map((x) => x.id === f.id ? { ...x, valor: e.target.value } : x) })} />
                               </label>
@@ -1680,7 +1680,7 @@ export default function App() {
                             </div>
                           ))}
                         </div>
-                        <button className="mt-2 text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1A1815", background: "#EFE8D9" }}
+                        <button className="mt-2 text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1F2937", background: "#EEF2F7" }}
                           onClick={() => setMkt(m.id, { frete: [...(m.frete || []), { id: uid(), ate: null, valor: 0 }] })}>
                           + Adicionar faixa de frete
                         </button>
@@ -1698,7 +1698,7 @@ export default function App() {
             })}
             <button
               onClick={() => { const id = uid(); setData((d) => ({ ...d, marketplaces: [...d.marketplaces, { id, nome: "Novo canal", faixas: [{ id: uid(), ate: null, pct: 0, fixo: 0 }], frete: [] }] })); setMktAberto(id); }}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm" style={{ background: "#B4690E" }}>
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-white shadow-sm" style={{ background: "#2563EB" }}>
               + Adicionar marketplace
             </button>
             {mktAberto && marketplaces.some((m) => m.id === mktAberto) && (
@@ -1714,14 +1714,14 @@ export default function App() {
 
         {/* ============ AJUDA ============ */}
         {tab === "ajuda" && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm border max-w-2xl space-y-4 text-sm leading-relaxed" style={{ borderColor: "#E3DBC9" }}>
+          <div className="bg-white rounded-2xl p-6 shadow-sm border max-w-2xl space-y-4 text-sm leading-relaxed" style={{ borderColor: "#E5E7EB" }}>
             <h3 className="font-semibold text-base">Como usar</h3>
             <p><strong>1 · Fábricas.</strong> Cadastre os custos fixos, máquinas e colaboradores de cada fábrica (LASER e ROUTER). O sistema calcula o custo por minuto de cada máquina e o custo de montagem, que alimentam automaticamente os insumos de corte e montagem.</p>
             <p><strong>2 · Insumos.</strong> Matéria-prima, embalagem e serviços com preço de compra e rendimento. Os itens de produção (CORTELASER, CORTEROUTER, MONTCILINDRO) são preenchidos pela aba Fábricas.</p>
             <p><strong>3 · Produtos.</strong> Monte a ficha técnica (quais insumos e quantidades, incluindo os minutos de corte). O custo de produção soma tudo automaticamente.</p>
             <p><strong>4 · Pacote embalado.</strong> Peso bruto e medidas. O sistema calcula o peso cúbico (C×L×A÷6000) e usa o maior dos dois para o frete.</p>
             <p><strong>5 · Preço por canal.</strong> Margem e imposto do produto → preço de venda para Shopee, Mercado Livre (Clássico e Premium), SHEIN, TikTok, Kwai e venda direta.</p>
-            <p style={{ color: "#6E675C" }}>Tudo é interligado: mudou o salário de um colaborador ou o preço de uma chapa, todos os produtos afetados recalculam sozinhos. Seus dados ficam salvos automaticamente.</p>
+            <p style={{ color: "#6B7280" }}>Tudo é interligado: mudou o salário de um colaborador ou o preço de uma chapa, todos os produtos afetados recalculam sozinhos. Seus dados ficam salvos automaticamente.</p>
             <ConfirmButton label="Restaurar dados de exemplo (apaga tudo)" confirmLabel="Toque de novo para apagar tudo"
               onConfirm={() => setData(SEED)}
               className="text-xs px-3 py-2 rounded-lg border" style={{ color: "#A33B2E", borderColor: "#E5C7C1" }} />
@@ -1771,13 +1771,13 @@ function InsumoForm({ insumo, fornecedores, onSave, onClose }) {
         <Field label="Rendimento (quanto rende)"><input type="number" step="any" className={inputCls} style={inputStyle} value={f.rendimento} onChange={set("rendimento")} /></Field>
         <Field label="Unidade de uso"><input className={inputCls} style={inputStyle} value={f.unidUso} onChange={set("unidUso")} placeholder="m², m, un, min" /></Field>
       </div>
-      <div className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: "#EFE8D9", color: "#4A4438" }}>
+      <div className="mt-4 rounded-xl px-4 py-3 text-sm" style={{ background: "#EEF2F7", color: "#374151" }}>
         Custo calculado: <strong>{BRL4(cu)} por {f.unidUso || "unid."}</strong>
       </div>
       <div className="flex justify-end gap-2 mt-5">
-        <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm border" style={{ borderColor: "#D8D0BF", color: "#4A443A" }}>Cancelar</button>
+        <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm border" style={{ borderColor: "#D8D0BF", color: "#374151" }}>Cancelar</button>
         <button disabled={!ok} onClick={() => onSave({ ...f, preco: num(f.preco), rendimento: num(f.rendimento) })}
-          className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40" style={{ background: "#B4690E" }}>
+          className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40" style={{ background: "#2563EB" }}>
           Salvar insumo
         </button>
       </div>
@@ -1797,9 +1797,9 @@ function FornecedorForm({ fornecedor, onSave, onClose }) {
         <Field label="Observações (opcional)"><input className={inputCls} style={inputStyle} value={f.obs} onChange={set("obs")} placeholder="Prazo de entrega, condições, etc." /></Field>
       </div>
       <div className="flex justify-end gap-2 mt-5">
-        <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm border" style={{ borderColor: "#D8D0BF", color: "#4A443A" }}>Cancelar</button>
+        <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm border" style={{ borderColor: "#D8D0BF", color: "#374151" }}>Cancelar</button>
         <button disabled={!ok} onClick={() => onSave(f)}
-          className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40" style={{ background: "#B4690E" }}>
+          className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40" style={{ background: "#2563EB" }}>
           Salvar fornecedor
         </button>
       </div>
@@ -1838,7 +1838,7 @@ function VendaForm({ produtos, marketplaces, insumos, onSave }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E3DBC9" }}>
+    <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
       <h3 className="font-semibold mb-3">Registrar venda</h3>
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 items-end">
         <Field label="Data"><input type="date" className={inputCls} style={inputStyle} value={f.data} onChange={(e) => setF({ ...f, data: e.target.value })} /></Field>
@@ -1864,11 +1864,11 @@ function VendaForm({ produtos, marketplaces, insumos, onSave }) {
         </Field>
       </div>
       <div className="flex items-center justify-between flex-wrap gap-2 mt-3">
-        <p className="text-xs" style={{ color: "#948B7C" }}>
+        <p className="text-xs" style={{ color: "#9CA3AF" }}>
           {isFinite(sugestao) ? `Preço sugerido pela precificação: ${BRL(sugestao)} — deixe em branco para usar, ou digite o preço real da venda.` : "Escolha produto e canal para ver o preço sugerido."}
         </p>
         <button disabled={!ok} onClick={salvar}
-          className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40" style={{ background: "#B4690E" }}>
+          className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40" style={{ background: "#2563EB" }}>
           Registrar venda
         </button>
       </div>
@@ -1880,7 +1880,7 @@ function LancamentoForm({ onSave }) {
   const [f, setF] = useState({ data: hojeISO(), descricao: "", categoria: "", tipo: "saida", valor: "" });
   const ok = f.descricao.trim() && num(f.valor) > 0;
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E3DBC9" }}>
+    <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
       <h3 className="font-semibold mb-3">Novo lançamento</h3>
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 items-end">
         <Field label="Data"><input type="date" className={inputCls} style={inputStyle} value={f.data} onChange={(e) => setF({ ...f, data: e.target.value })} /></Field>
@@ -1898,7 +1898,7 @@ function LancamentoForm({ onSave }) {
       </div>
       <div className="flex justify-end mt-3">
         <button disabled={!ok} onClick={() => { onSave({ id: uid(), ...f, valor: num(f.valor) }); setF({ data: f.data, descricao: "", categoria: "", tipo: f.tipo, valor: "" }); }}
-          className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40" style={{ background: "#B4690E" }}>
+          className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40" style={{ background: "#2563EB" }}>
           Adicionar
         </button>
       </div>
@@ -1955,13 +1955,13 @@ function ImportadorShopee({ produtos, insumos, vendas, onImport, setErro }) {
   })();
 
   return (
-    <div className="rounded-2xl p-5 shadow-sm border" style={{ background: "#1A1815", borderColor: "#1A1815" }}>
+    <div className="rounded-2xl p-5 shadow-sm border" style={{ background: "#1F2937", borderColor: "#1F2937" }}>
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h3 className="font-semibold text-white">Importar pedidos da Shopee</h3>
-          <p className="text-xs mt-1" style={{ color: "#B5A98F" }}>Exporte o relatório de pedidos (Concluídos e Enviados) do UpSeller e envie os .xlsx das suas contas de uma vez. Taxas reais e recebimento (entrega + 7 dias) calculados automaticamente.</p>
+          <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>Exporte o relatório de pedidos (Concluídos e Enviados) do UpSeller e envie os .xlsx das suas contas de uma vez. Taxas reais e recebimento (entrega + 7 dias) calculados automaticamente.</p>
         </div>
-        <label className="px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer" style={{ background: "#B4690E", color: "#fff" }}>
+        <label className="px-4 py-2 rounded-lg text-sm font-semibold cursor-pointer" style={{ background: "#2563EB", color: "#fff" }}>
           {processando ? "Lendo…" : "Escolher arquivos"}
           <input type="file" accept=".xlsx" multiple className="hidden" disabled={processando}
             onChange={(e) => { if (e.target.files?.length) lerArquivos(Array.from(e.target.files)); e.target.value = ""; }} />
@@ -1973,7 +1973,7 @@ function ImportadorShopee({ produtos, insumos, vendas, onImport, setErro }) {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
             {[["Vendas novas", preview.vendas.length, "#fff"], ["Receita", BRL(resumo.receita), "#fff"], ["Lucro estimado", BRL(resumo.lucro), "#F0C05A"], ["Líquido a receber", BRL(resumo.liquido), "#fff"]].map(([l, v, c]) => (
               <div key={l}>
-                <p className="text-xs" style={{ color: "#B5A98F" }}>{l}</p>
+                <p className="text-xs" style={{ color: "#9CA3AF" }}>{l}</p>
                 <p className="text-lg font-bold" style={{ color: c }}>{v}</p>
               </div>
             ))}
@@ -1985,13 +1985,13 @@ function ImportadorShopee({ produtos, insumos, vendas, onImport, setErro }) {
           {resumo.semSkuList.length > 0 && (
             <details className="mt-2">
               <summary className="text-xs cursor-pointer" style={{ color: "#E8C468" }}>⚠ {resumo.semSkuList.length} SKU(s) não reconhecido(s) — não serão importados</summary>
-              <p className="text-xs mt-1" style={{ color: "#B5A98F" }}>{resumo.semSkuList.map(([s, q]) => `${s} (${q})`).join(", ")}</p>
-              <p className="text-xs mt-1" style={{ color: "#948B7C" }}>Cadastre esses SKUs em Produtos (ou ajuste o SKU do anúncio na Shopee) e reimporte.</p>
+              <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>{resumo.semSkuList.map(([s, q]) => `${s} (${q})`).join(", ")}</p>
+              <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>Cadastre esses SKUs em Produtos (ou ajuste o SKU do anúncio na Shopee) e reimporte.</p>
             </details>
           )}
           <div className="flex gap-2 mt-4">
-            <button onClick={() => setPreview(null)} className="px-4 py-2 rounded-lg text-sm border" style={{ borderColor: "#4A4438", color: "#D8CFBC" }}>Cancelar</button>
-            <button onClick={confirmar} className="px-4 py-2 rounded-lg text-sm font-semibold text-white" style={{ background: "#B4690E" }}>
+            <button onClick={() => setPreview(null)} className="px-4 py-2 rounded-lg text-sm border" style={{ borderColor: "#374151", color: "#D8CFBC" }}>Cancelar</button>
+            <button onClick={confirmar} className="px-4 py-2 rounded-lg text-sm font-semibold text-white" style={{ background: "#2563EB" }}>
               Confirmar importação de {preview.vendas.length} vendas
             </button>
           </div>
@@ -2017,9 +2017,9 @@ function CalendarioRecebimentos({ vendas }) {
   const ordenadas = Object.entries(semanas).sort((a, b) => a[0].localeCompare(b[0])).slice(0, 8);
   const max = Math.max(...ordenadas.map(([, v]) => v));
   return (
-    <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E3DBC9" }}>
+    <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
       <h3 className="font-semibold mb-1">Calendário de recebimentos (líquido)</h3>
-      <p className="text-xs mb-4" style={{ color: "#948B7C" }}>Quanto e quando cai, com base na data de entrega + prazo de cada canal. Semana a partir da segunda-feira.</p>
+      <p className="text-xs mb-4" style={{ color: "#9CA3AF" }}>Quanto e quando cai, com base na data de entrega + prazo de cada canal. Semana a partir da segunda-feira.</p>
       <div className="space-y-2">
         {ordenadas.map(([seg, val]) => {
           const segD = new Date(seg + "T12:00:00");
@@ -2027,9 +2027,9 @@ function CalendarioRecebimentos({ vendas }) {
           const label = `${String(segD.getDate()).padStart(2, "0")}/${String(segD.getMonth() + 1).padStart(2, "0")} a ${String(dom.getDate()).padStart(2, "0")}/${String(dom.getMonth() + 1).padStart(2, "0")}`;
           return (
             <div key={seg} className="flex items-center gap-3">
-              <span className="text-xs w-28 shrink-0" style={{ color: "#6E675C" }}>{label}</span>
-              <div className="flex-1 rounded-full h-6 overflow-hidden" style={{ background: "#EFE9DA" }}>
-                <div className="h-full rounded-full flex items-center justify-end px-2" style={{ width: `${Math.max(8, (val / max) * 100)}%`, background: "#1A1815" }}>
+              <span className="text-xs w-28 shrink-0" style={{ color: "#6B7280" }}>{label}</span>
+              <div className="flex-1 rounded-full h-6 overflow-hidden" style={{ background: "#EEF2F7" }}>
+                <div className="h-full rounded-full flex items-center justify-end px-2" style={{ width: `${Math.max(8, (val / max) * 100)}%`, background: "#1F2937" }}>
                   <span className="text-xs font-semibold text-white whitespace-nowrap">{BRL(val)}</span>
                 </div>
               </div>
@@ -2126,14 +2126,14 @@ function ImportadorTikTok({ produtos, insumos, marketplaces, vendas, onImport, s
   return (
     <div className="rounded-2xl p-5 shadow-sm border" style={{ background: "#2B2723", borderColor: "#2B2723" }}>
       <h3 className="font-semibold text-white">Importar vendas do TikTok Shop</h3>
-      <p className="text-xs mt-1 mb-4" style={{ color: "#B5A98F" }}>
-        Use a <strong>merchant statement</strong> (profit &amp; loss): ela traz o ganho líquido real e a data de liquidação de cada pedido. O "batch edit" liga o SKU ID ao seu SKU. Carregue os dois: primeiro o dicionário, depois a statement. <span style={{ color: "#948B7C" }}>Se o batch edit veio em .zip, descompacte antes e envie os .xlsx de dentro.</span>
+      <p className="text-xs mt-1 mb-4" style={{ color: "#9CA3AF" }}>
+        Use a <strong>merchant statement</strong> (profit &amp; loss): ela traz o ganho líquido real e a data de liquidação de cada pedido. O "batch edit" liga o SKU ID ao seu SKU. Carregue os dois: primeiro o dicionário, depois a statement. <span style={{ color: "#9CA3AF" }}>Se o batch edit veio em .zip, descompacte antes e envie os .xlsx de dentro.</span>
       </p>
 
       <div className="space-y-3">
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs w-6 h-6 rounded-full flex items-center justify-center font-bold" style={{ background: mapa ? "#4A6B3C" : "#4A4438", color: "#fff" }}>1</span>
-          <label className="px-3 py-2 rounded-lg text-sm font-semibold cursor-pointer" style={{ background: "#4A4438", color: "#fff" }}>
+          <span className="text-xs w-6 h-6 rounded-full flex items-center justify-center font-bold" style={{ background: mapa ? "#4A6B3C" : "#374151", color: "#fff" }}>1</span>
+          <label className="px-3 py-2 rounded-lg text-sm font-semibold cursor-pointer" style={{ background: "#374151", color: "#fff" }}>
             Carregar dicionário (batch edit)
             <input type="file" accept=".xlsx,.zip" multiple className="hidden" disabled={processando}
               onChange={(e) => { if (e.target.files?.length) carregarDicionario(Array.from(e.target.files)); e.target.value = ""; }} />
@@ -2142,8 +2142,8 @@ function ImportadorTikTok({ produtos, insumos, marketplaces, vendas, onImport, s
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-xs w-6 h-6 rounded-full flex items-center justify-center font-bold" style={{ background: preview ? "#4A6B3C" : "#4A4438", color: "#fff" }}>2</span>
-          <label className="px-3 py-2 rounded-lg text-sm font-semibold cursor-pointer" style={{ background: mapa ? "#B4690E" : "#4A4438", color: "#fff", opacity: mapa ? 1 : 0.5 }}>
+          <span className="text-xs w-6 h-6 rounded-full flex items-center justify-center font-bold" style={{ background: preview ? "#4A6B3C" : "#374151", color: "#fff" }}>2</span>
+          <label className="px-3 py-2 rounded-lg text-sm font-semibold cursor-pointer" style={{ background: mapa ? "#2563EB" : "#374151", color: "#fff", opacity: mapa ? 1 : 0.5 }}>
             Carregar merchant statement
             <input type="file" accept=".xlsx" className="hidden" disabled={processando || !mapa}
               onChange={(e) => { if (e.target.files?.[0]) carregarRelatorio(e.target.files[0]); e.target.value = ""; }} />
@@ -2152,11 +2152,11 @@ function ImportadorTikTok({ produtos, insumos, marketplaces, vendas, onImport, s
       </div>
 
       {preview && resumo && (
-        <div className="mt-4 rounded-xl p-4" style={{ background: "#1A1815" }}>
+        <div className="mt-4 rounded-xl p-4" style={{ background: "#1F2937" }}>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
             {[["Vendas novas", preview.vendas.length, "#fff"], ["Ganho líquido real", BRL(resumo.liquido), "#fff"], ["Lucro real", BRL(resumo.lucro), "#F0C05A"]].map(([l, v, c]) => (
               <div key={l}>
-                <p className="text-xs" style={{ color: "#B5A98F" }}>{l}</p>
+                <p className="text-xs" style={{ color: "#9CA3AF" }}>{l}</p>
                 <p className="text-lg font-bold" style={{ color: c }}>{v}</p>
               </div>
             ))}
@@ -2171,12 +2171,12 @@ function ImportadorTikTok({ produtos, insumos, marketplaces, vendas, onImport, s
           {preview.semMapa.length > 0 && (
             <details className="mt-2">
               <summary className="text-xs cursor-pointer" style={{ color: "#E8C468" }}>⚠ {preview.semMapa.length} SKU ID sem correspondência no dicionário</summary>
-              <p className="text-xs mt-1" style={{ color: "#B5A98F" }}>Produtos criados depois do template exportado. Exporte um novo "batch edit" e recarregue o dicionário. IDs: {preview.semMapa.slice(0, 10).join(", ")}{preview.semMapa.length > 10 ? "…" : ""}</p>
+              <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>Produtos criados depois do template exportado. Exporte um novo "batch edit" e recarregue o dicionário. IDs: {preview.semMapa.slice(0, 10).join(", ")}{preview.semMapa.length > 10 ? "…" : ""}</p>
             </details>
           )}
           <div className="flex gap-2 mt-4">
-            <button onClick={() => setPreview(null)} className="px-4 py-2 rounded-lg text-sm border" style={{ borderColor: "#4A4438", color: "#D8CFBC" }}>Cancelar</button>
-            <button onClick={() => { onImport(preview.vendas); setPreview(null); }} className="px-4 py-2 rounded-lg text-sm font-semibold text-white" style={{ background: "#B4690E" }}>
+            <button onClick={() => setPreview(null)} className="px-4 py-2 rounded-lg text-sm border" style={{ borderColor: "#374151", color: "#D8CFBC" }}>Cancelar</button>
+            <button onClick={() => { onImport(preview.vendas); setPreview(null); }} className="px-4 py-2 rounded-lg text-sm font-semibold text-white" style={{ background: "#2563EB" }}>
               Confirmar importação de {preview.vendas.length} vendas
             </button>
           </div>
@@ -2198,16 +2198,16 @@ function empresaDoSku(sku) {
 
 // ============ VENDAS (Tiny) — filtros e empresa ============
 // ====== Cores, gráficos (SVG puro, sem dependências) e helpers ======
-const PALETA = ["#B4462F", "#2E7D4F", "#B4690E", "#3E6B8C", "#7A5AA0", "#C99A2E", "#4A8C7A", "#A0524A"];
+const PALETA = ["#2563EB", "#16A34A", "#F59E0B", "#DC2626", "#7C3AED", "#0EA5E9", "#14B8A6", "#EC4899"];
 
 function corSituacao(sit) {
   const t = String(sit || "").toLowerCase();
-  if (t.includes("entreg") && !t.includes("nao") && !t.includes("não")) return { bg: "#E4F1E8", fg: "#2E7D4F" };
+  if (t.includes("entreg") && !t.includes("nao") && !t.includes("não")) return { bg: "#E4F1E8", fg: "#16A34A" };
   if (t.includes("envi")) return { bg: "#E3EDF6", fg: "#2F5E8C" };
   if (t.includes("aprov")) return { bg: "#E5F0EC", fg: "#2E7D6F" };
   if (t.includes("aberto")) return { bg: "#FBF0D9", fg: "#9A6B12" };
-  if (t.includes("cancel") || t.includes("devolv")) return { bg: "#F7E3DF", fg: "#B4462F" };
-  return { bg: "#EEE9DF", fg: "#6E675C" };
+  if (t.includes("cancel") || t.includes("devolv")) return { bg: "#F7E3DF", fg: "#DC2626" };
+  return { bg: "#EEE9DF", fg: "#6B7280" };
 }
 
 function parseDataFlex(s) {
@@ -2221,7 +2221,7 @@ function parseDataFlex(s) {
   return null;
 }
 
-const cardBox = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
+const cardBox = { background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 12, padding: 16 };
 
 function Pizza({ dados, titulo }) {
   const validos = (dados || []).filter((d) => d.valor > 0);
@@ -2241,8 +2241,8 @@ function Pizza({ dados, titulo }) {
   });
   return (
     <div style={cardBox}>
-      <p className="text-sm font-semibold mb-2" style={{ color: "#4A443A" }}>{titulo}</p>
-      {total === 0 ? <p className="text-xs" style={{ color: "#948B7C" }}>Sem dados.</p> : (
+      <p className="text-sm font-semibold mb-2" style={{ color: "#374151" }}>{titulo}</p>
+      {total === 0 ? <p className="text-xs" style={{ color: "#9CA3AF" }}>Sem dados.</p> : (
         <div className="flex items-center gap-3">
           <svg width="140" height="140" viewBox="0 0 140 140" style={{ flexShrink: 0 }}>
             {arcos.map((a, i) => <path key={i} d={a.path} fill={a.cor} stroke="#FFF" strokeWidth="1.5" />)}
@@ -2252,8 +2252,8 @@ function Pizza({ dados, titulo }) {
             {arcos.map((a, i) => (
               <div key={i} className="flex items-center gap-2 text-xs">
                 <span style={{ width: 10, height: 10, borderRadius: 2, background: a.cor, display: "inline-block", flexShrink: 0 }} />
-                <span className="flex-1 truncate" style={{ color: "#6E675C" }}>{a.label}</span>
-                <span className="font-medium" style={{ color: "#4A443A" }}>{a.pct.toFixed(0)}%</span>
+                <span className="flex-1 truncate" style={{ color: "#6B7280" }}>{a.label}</span>
+                <span className="font-medium" style={{ color: "#374151" }}>{a.pct.toFixed(0)}%</span>
               </div>
             ))}
           </div>
@@ -2263,19 +2263,19 @@ function Pizza({ dados, titulo }) {
   );
 }
 
-function Torre({ dados, titulo, cor = "#B4690E", formato }) {
+function Torre({ dados, titulo, cor = "#2563EB", formato }) {
   const fmt = formato || ((n) => String(Math.round(n)));
   const max = Math.max(...(dados || []).map((d) => d.valor), 1);
   return (
     <div style={cardBox}>
-      <p className="text-sm font-semibold mb-3" style={{ color: "#4A443A" }}>{titulo}</p>
-      {(!dados || dados.length === 0) ? <p className="text-xs" style={{ color: "#948B7C" }}>Sem dados.</p> : (
+      <p className="text-sm font-semibold mb-3" style={{ color: "#374151" }}>{titulo}</p>
+      {(!dados || dados.length === 0) ? <p className="text-xs" style={{ color: "#9CA3AF" }}>Sem dados.</p> : (
         <div className="flex items-end gap-1" style={{ height: 150 }}>
           {dados.map((d, i) => (
             <div key={i} className="flex-1 flex flex-col items-center justify-end min-w-0" title={d.label + ": " + fmt(d.valor)}>
-              <span className="text-[9px] mb-1 whitespace-nowrap" style={{ color: "#6E675C" }}>{d.valor > 0 ? fmt(d.valor) : ""}</span>
+              <span className="text-[9px] mb-1 whitespace-nowrap" style={{ color: "#6B7280" }}>{d.valor > 0 ? fmt(d.valor) : ""}</span>
               <div style={{ width: "78%", height: Math.max(2, (d.valor / max) * 110), background: d.cor || cor, borderRadius: "3px 3px 0 0" }} />
-              <span className="text-[9px] mt-1 truncate w-full text-center" style={{ color: "#948B7C" }}>{d.label}</span>
+              <span className="text-[9px] mt-1 truncate w-full text-center" style={{ color: "#9CA3AF" }}>{d.label}</span>
             </div>
           ))}
         </div>
@@ -2295,6 +2295,8 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
   const [busca, setBusca] = useState("");
   const [dataIni, setDataIni] = useState("");
   const [dataFim, setDataFim] = useState("");
+  const [pagina, setPagina] = useState(1);
+  const POR_PAGINA = 50;
 
   async function carregar() {
     // O Supabase limita cada requisição a 1000 linhas (o .limit(3000) era
@@ -2413,6 +2415,11 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
     return true;
   });
   const linhas = filtro === "pagos" ? linhasBase.filter(({ v }) => ehPaga(v.situacao)) : linhasBase;
+  // volta para a página 1 quando muda filtro/busca/dados
+  useEffect(() => { setPagina(1); }, [empresa, canalF, filtro, busca, dataIni, dataFim, vendas.length]);
+  const totalPaginas = Math.max(1, Math.ceil(linhas.length / POR_PAGINA));
+  const paginaAtual = Math.min(pagina, totalPaginas);
+  const linhasPagina = linhas.slice((paginaAtual - 1) * POR_PAGINA, paginaAtual * POR_PAGINA);
   const tot = linhas.reduce((s, { c }) => ({
     receita: s.receita + c.receita, faturamento: s.faturamento + c.faturamento, custo: s.custo + c.custo, taxas: s.taxas + c.taxas,
     imposto: s.imposto + c.imposto, lucro: s.lucro + c.lucro,
@@ -2463,91 +2470,91 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
       .map((x) => { const d = new Date(x.k); return { label: String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0"), valor: x.valor }; });
   })();
 
-  const card = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
-  const ctrl = { borderColor: "#E4DCCB", background: "#FFFFFF" };
+  const card = { background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 12, padding: 16 };
+  const ctrl = { borderColor: "#E5E7EB", background: "#FFFFFF" };
   function limpar() { setEmpresa("todas"); setCanalF("todos"); setBusca(""); setDataIni(""); setDataFim(""); setFiltro("pagos"); }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
         <div>
-          <h2 className="text-lg font-semibold" style={{ color: "#1A1815" }}>Vendas</h2>
-          <p className="text-xs" style={{ color: "#948B7C" }}>Vendas vindas do Tiny, em tempo real, com lucro calculado.{" "}{aoVivo ? "🟢 Ao vivo" : "⚪ Conectando..."}</p>
+          <h2 className="text-lg font-semibold" style={{ color: "#1F2937" }}>Vendas</h2>
+          <p className="text-xs" style={{ color: "#9CA3AF" }}>Vendas vindas do Tiny, em tempo real, com lucro calculado.{" "}{aoVivo ? "🟢 Ao vivo" : "⚪ Conectando..."}</p>
         </div>
-        <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1A1815", color: "#F5EFE2" }}>Atualizar</button>
+        <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1F2937", color: "#F4F5F7" }}>Atualizar</button>
       </div>
       <div className="flex flex-wrap items-end gap-2 mb-4">
-        <label className="text-xs" style={{ color: "#6E675C" }}>Empresa
+        <label className="text-xs" style={{ color: "#6B7280" }}>Empresa
           <select value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
             <option value="todas">Todas</option><option value="LASER">LASER</option><option value="ROUTER">ROUTER</option>
           </select>
         </label>
-        <label className="text-xs" style={{ color: "#6E675C" }}>Marketplace
+        <label className="text-xs" style={{ color: "#6B7280" }}>Marketplace
           <select value={canalF} onChange={(e) => setCanalF(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
             <option value="todos">Todos</option>{canaisPresentes.map((g) => <option key={g} value={g}>{g}</option>)}
           </select>
         </label>
-        <label className="text-xs" style={{ color: "#6E675C" }}>Situacao
+        <label className="text-xs" style={{ color: "#6B7280" }}>Situacao
           <select value={filtro} onChange={(e) => setFiltro(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
             <option value="pagos">Somente pagos</option><option value="todos">Todos</option>
           </select>
         </label>
-        <label className="text-xs" style={{ color: "#6E675C" }}>De
+        <label className="text-xs" style={{ color: "#6B7280" }}>De
           <input type="date" value={dataIni} onChange={(e) => setDataIni(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl} />
         </label>
-        <label className="text-xs" style={{ color: "#6E675C" }}>Ate
+        <label className="text-xs" style={{ color: "#6B7280" }}>Ate
           <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl} />
         </label>
-        <label className="text-xs flex-1 min-w-[180px]" style={{ color: "#6E675C" }}>Produto (SKU ou nome)
+        <label className="text-xs flex-1 min-w-[180px]" style={{ color: "#6B7280" }}>Produto (SKU ou nome)
           <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar..." className="block w-full px-2 py-2 rounded-lg border text-sm" style={ctrl} />
         </label>
-        <button onClick={limpar} className="px-3 py-2 rounded-lg border text-sm" style={{ color: "#6E675C", borderColor: "#E4DCCB" }}>Limpar</button>
+        <button onClick={limpar} className="px-3 py-2 rounded-lg border text-sm" style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>Limpar</button>
       </div>
-      {erro && <p className="text-sm mb-3" style={{ color: "#B4462F" }}>Erro: {erro}</p>}
+      {erro && <p className="text-sm mb-3" style={{ color: "#DC2626" }}>Erro: {erro}</p>}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Faturamento <span title="Total do pedido com frete, já descontados os descontos (valor_total, igual ao Tiny)">ⓘ</span></p><p className="text-lg font-semibold">{BRL(tot.faturamento)}</p></div>
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Lucro</p><p className="text-lg font-semibold" style={{ color: tot.lucro >= 0 ? "#2E7D4F" : "#B4462F" }}>{BRL(tot.lucro)}</p></div>
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Margem media</p><p className="text-lg font-semibold">{isFinite(margemMedia) ? margemMedia.toFixed(1) + "%" : "—"}</p></div>
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>N de vendas</p><p className="text-lg font-semibold">{linhas.length}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>Faturamento <span title="Total do pedido com frete, já descontados os descontos (valor_total, igual ao Tiny)">ⓘ</span></p><p className="text-lg font-semibold">{BRL(tot.faturamento)}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>Lucro</p><p className="text-lg font-semibold" style={{ color: tot.lucro >= 0 ? "#16A34A" : "#DC2626" }}>{BRL(tot.lucro)}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>Margem media</p><p className="text-lg font-semibold">{isFinite(margemMedia) ? margemMedia.toFixed(1) + "%" : "—"}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>N de vendas</p><p className="text-lg font-semibold">{linhas.length}</p></div>
       </div>
 
       {!carregando && linhas.length > 0 && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-            <div style={{ ...card, borderLeft: "4px solid #2E7D4F" }}>
-              <p className="text-xs" style={{ color: "#948B7C" }}>A receber (previsto, líquido)</p>
-              <p className="text-lg font-semibold" style={{ color: "#2E7D4F" }}>{BRL(totalReceber)}</p>
+            <div style={{ ...card, borderLeft: "4px solid #16A34A" }}>
+              <p className="text-xs" style={{ color: "#9CA3AF" }}>A receber (previsto, líquido)</p>
+              <p className="text-lg font-semibold" style={{ color: "#16A34A" }}>{BRL(totalReceber)}</p>
             </div>
-            <div style={{ ...card, borderLeft: "4px solid #B4690E" }}>
-              <p className="text-xs" style={{ color: "#948B7C" }}>Entra nos próximos 7 dias</p>
-              <p className="text-lg font-semibold" style={{ color: "#B4690E" }}>{BRL(receber7)}</p>
+            <div style={{ ...card, borderLeft: "4px solid #2563EB" }}>
+              <p className="text-xs" style={{ color: "#9CA3AF" }}>Entra nos próximos 7 dias</p>
+              <p className="text-lg font-semibold" style={{ color: "#2563EB" }}>{BRL(receber7)}</p>
             </div>
             <div style={{ ...card, borderLeft: "4px solid #3E6B8C" }}>
-              <p className="text-xs" style={{ color: "#948B7C" }}>Pedidos a receber</p>
+              <p className="text-xs" style={{ color: "#9CA3AF" }}>Pedidos a receber</p>
               <p className="text-lg font-semibold" style={{ color: "#3E6B8C" }}>{recebiveis.length}</p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5">
-            <Torre titulo="Recebimentos previstos por semana" dados={porSemana} cor="#2E7D4F" formato={BRLk} />
-            <Torre titulo="Faturamento por dia" dados={porDia} cor="#B4690E" formato={BRLk} />
+            <Torre titulo="Recebimentos previstos por semana" dados={porSemana} cor="#16A34A" formato={BRLk} />
+            <Torre titulo="Faturamento por dia" dados={porDia} cor="#2563EB" formato={BRLk} />
             <Pizza titulo="Faturamento por marketplace" dados={porMarket} />
             <Pizza titulo="Pedidos por situação" dados={porSituacao} />
           </div>
-          <p className="text-[11px] mb-4" style={{ color: "#B5A98F" }}>
+          <p className="text-[11px] mb-4" style={{ color: "#9CA3AF" }}>
             Recebimento previsto = data de entrega + prazo do marketplace (editável em Marketplaces). Enquanto a entrega não é confirmada pelo Tiny, a data é estimada. Cancelados/devolvidos ficam de fora.
           </p>
         </>
       )}
 
       {carregando ? (
-        <p className="text-sm" style={{ color: "#948B7C" }}>Carregando vendas...</p>
+        <p className="text-sm" style={{ color: "#9CA3AF" }}>Carregando vendas...</p>
       ) : linhas.length === 0 ? (
-        <div style={card}><p className="text-sm" style={{ color: "#6E675C" }}>Nenhuma venda com esses filtros.</p></div>
+        <div style={card}><p className="text-sm" style={{ color: "#6B7280" }}>Nenhuma venda com esses filtros.</p></div>
       ) : (
         <div className="overflow-x-auto" style={card}>
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ color: "#948B7C", textAlign: "left" }}>
+              <tr style={{ color: "#9CA3AF", textAlign: "left" }}>
                 <th className="py-2 pr-3">Data</th><th className="py-2 pr-3">Pedido</th><th className="py-2 pr-3">Empresa</th>
                 <th className="py-2 pr-3">Canal</th><th className="py-2 pr-3">Situacao</th><th className="py-2 pr-3">Cliente</th>
                 <th className="py-2 pr-3 text-right">Itens</th><th className="py-2 pr-3 text-right">Receita</th><th className="py-2 pr-3 text-right">Custo</th>
@@ -2555,11 +2562,11 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
               </tr>
             </thead>
             <tbody>
-              {linhas.map(({ v, c, emp }) => (
-                <tr key={v.id} style={{ borderTop: "1px solid #F0EADD", opacity: ehPaga(v.situacao) ? 1 : 0.55 }}>
+              {linhasPagina.map(({ v, c, emp }) => (
+                <tr key={v.id} style={{ borderTop: "1px solid #EEF0F2", opacity: ehPaga(v.situacao) ? 1 : 0.55 }}>
                   <td className="py-2 pr-3">{fmtData(v.data_pedido)}</td>
                   <td className="py-2 pr-3">{v.numero || "—"}</td>
-                  <td className="py-2 pr-3"><span className="px-2 py-0.5 rounded text-[11px]" style={{ background: emp === "ROUTER" ? "#E8EEF6" : "#F3ECDD", color: "#4A443A" }}>{emp}</span></td>
+                  <td className="py-2 pr-3"><span className="px-2 py-0.5 rounded text-[11px]" style={{ background: emp === "ROUTER" ? "#EFF6FF" : "#F1F5F9", color: "#374151" }}>{emp}</span></td>
                   <td className="py-2 pr-3">{v.canal || "—"}</td>
                   <td className="py-2 pr-3"><span className="px-2 py-0.5 rounded text-[11px] whitespace-nowrap" style={{ background: corSituacao(v.situacao).bg, color: corSituacao(v.situacao).fg }}>{v.situacao || "—"}</span></td>
                   <td className="py-2 pr-3">{v.cliente_nome || "—"}</td>
@@ -2568,13 +2575,27 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
                   <td className="py-2 pr-3 text-right">{BRL(c.custo)}</td>
                   <td className="py-2 pr-3 text-right">{BRL(c.taxas)}</td>
                   <td className="py-2 pr-3 text-right">{BRL(c.imposto)}</td>
-                  <td className="py-2 pr-3 text-right" style={{ color: c.lucro >= 0 ? "#2E7D4F" : "#B4462F", fontWeight: 500 }}>{BRL(c.lucro)}</td>
+                  <td className="py-2 pr-3 text-right" style={{ color: c.lucro >= 0 ? "#16A34A" : "#DC2626", fontWeight: 500 }}>{BRL(c.lucro)}</td>
                   <td className="py-2 pr-3 text-right">{isFinite(c.margem) ? c.margem.toFixed(0) + "%" : "—"}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="text-[11px] mt-3" style={{ color: "#B5A98F" }}>"Somente pagos" exclui em aberto/cancelados/incompletos. Empresa vem do produto (regra de SKU, editavel). ⚠ = item sem SKU no catalogo.</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
+            <span className="text-xs" style={{ color: "#9CA3AF" }}>
+              Mostrando {(paginaAtual - 1) * POR_PAGINA + 1}–{Math.min(paginaAtual * POR_PAGINA, linhas.length)} de {linhas.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPagina(paginaAtual - 1)} disabled={paginaAtual <= 1}
+                className="px-3 py-1.5 rounded-lg border text-sm disabled:opacity-40"
+                style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>← Anterior</button>
+              <span className="text-xs" style={{ color: "#6B7280" }}>Página {paginaAtual} de {totalPaginas}</span>
+              <button onClick={() => setPagina(paginaAtual + 1)} disabled={paginaAtual >= totalPaginas}
+                className="px-3 py-1.5 rounded-lg border text-sm disabled:opacity-40"
+                style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>Próxima →</button>
+            </div>
+          </div>
+          <p className="text-[11px] mt-3" style={{ color: "#9CA3AF" }}>"Somente pagos" exclui em aberto/cancelados/incompletos. Empresa vem do produto (regra de SKU, editavel). ⚠ = item sem SKU no catalogo.</p>
         </div>
       )}
     </div>
@@ -2595,19 +2616,19 @@ function RH({ fabricas, setFab }) {
   const totalGeral = setores.reduce((s, st) => s + st.lista.reduce((a, c) => a + num(c.total), 0), 0);
   const headcount = setores.reduce((s, st) => s + st.lista.length, 0);
 
-  const card = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
+  const card = { background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 12, padding: 16 };
   const mi = "w-full px-2 py-1 rounded border text-sm";
-  const ms = { borderColor: "#E4DCCB", background: "#FFFFFF" };
+  const ms = { borderColor: "#E5E7EB", background: "#FFFFFF" };
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBF6E9", border: "1px solid #E8D9A8", color: "#6B5A1E" }}>
+      <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#475569" }}>
         Colaboradores por setor. O total de cada setor alimenta automaticamente os custos da aba <strong>Fabricas</strong> (linha "Total Colaboradores" e o custo de montagem). O <strong>Total</strong> de cada pessoa e salario + encargos + bonus.
       </div>
       <div className="grid grid-cols-3 gap-3">
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Folha total (mes)</p><p className="text-lg font-semibold">{BRL(totalGeral)}</p></div>
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Colaboradores</p><p className="text-lg font-semibold">{headcount}</p></div>
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Setores</p><p className="text-lg font-semibold">{setores.length}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>Folha total (mes)</p><p className="text-lg font-semibold">{BRL(totalGeral)}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>Colaboradores</p><p className="text-lg font-semibold">{headcount}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>Setores</p><p className="text-lg font-semibold">{setores.length}</p></div>
       </div>
       {setores.map((st) => {
         const totSetor = st.lista.reduce((a, c) => a + num(c.total), 0);
@@ -2615,12 +2636,12 @@ function RH({ fabricas, setFab }) {
           <div key={st.key} style={card}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-semibold">{st.nome}</h3>
-              <p className="text-sm" style={{ color: "#6E675C" }}>{st.lista.length} pessoa(s) · <strong>{BRL(totSetor)}</strong>/mes</p>
+              <p className="text-sm" style={{ color: "#6B7280" }}>{st.lista.length} pessoa(s) · <strong>{BRL(totSetor)}</strong>/mes</p>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm" style={{ minWidth: 680 }}>
                 <thead>
-                  <tr style={{ color: "#6E675C", textAlign: "left" }}>
+                  <tr style={{ color: "#6B7280", textAlign: "left" }}>
                     <th className="px-2 py-2">Nome</th><th className="px-2 py-2">Cargo</th>
                     <th className="px-2 py-2 text-right">Salario</th><th className="px-2 py-2 text-right">Encargos</th>
                     <th className="px-2 py-2 text-right">Bonus</th><th className="px-2 py-2 text-right">Total</th><th className="px-2 py-2"></th>
@@ -2628,7 +2649,7 @@ function RH({ fabricas, setFab }) {
                 </thead>
                 <tbody>
                   {st.lista.map((c) => (
-                    <tr key={c.id} style={{ borderTop: "1px solid #F0EADD" }}>
+                    <tr key={c.id} style={{ borderTop: "1px solid #EEF0F2" }}>
                       <td className="px-2 py-1"><input className={mi} style={ms} value={c.nome || ""}
                         onChange={(e) => st.salvar(st.lista.map((x) => x.id === c.id ? { ...x, nome: e.target.value } : x))} /></td>
                       <td className="px-2 py-1"><input className={mi} style={ms} value={c.cargo || ""}
@@ -2645,7 +2666,7 @@ function RH({ fabricas, setFab }) {
                 </tbody>
               </table>
             </div>
-            <button className="mt-3 text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1A1815", background: "#EFE8D9" }}
+            <button className="mt-3 text-sm font-semibold px-3 py-1.5 rounded-lg" style={{ color: "#1F2937", background: "#EEF2F7" }}
               onClick={() => st.salvar([...st.lista, { id: uid(), nome: "Novo colaborador", cargo: "", salario: 0, encargos: 0, bonus: 0, total: 0 }])}>
               + Adicionar colaborador
             </button>
@@ -2738,18 +2759,18 @@ function Relatorios({ produtos, insumos, fornecedores }) {
     XLSX.writeFile(wb, "materia-prima_" + ini + "_a_" + fim + ".xlsx");
   }
 
-  const card = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
-  const ctrl = { borderColor: "#E4DCCB", background: "#FFFFFF" };
+  const card = { background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 12, padding: 16 };
+  const ctrl = { borderColor: "#E5E7EB", background: "#FFFFFF" };
   const iv = intervalo();
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBF6E9", border: "1px solid #E8D9A8", color: "#6B5A1E" }}>
+      <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#475569" }}>
         Consumo TEORICO de materia-prima no periodo (explode cada produto vendido na ficha tecnica), por fornecedor e insumo, separado por empresa. Considera apenas pedidos pagos.
       </div>
 
       <div className="flex flex-wrap items-end gap-2">
-        <label className="text-xs" style={{ color: "#6E675C" }}>Periodo
+        <label className="text-xs" style={{ color: "#6B7280" }}>Periodo
           <select value={periodo} onChange={(e) => setPeriodo(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
             <option value="semana">Ultimos 7 dias</option>
             <option value="mes">Mes anterior (fechado)</option>
@@ -2758,36 +2779,36 @@ function Relatorios({ produtos, insumos, fornecedores }) {
         </label>
         {periodo === "custom" && (
           <>
-            <label className="text-xs" style={{ color: "#6E675C" }}>De
+            <label className="text-xs" style={{ color: "#6B7280" }}>De
               <input type="date" value={dataIni} onChange={(e) => setDataIni(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl} />
             </label>
-            <label className="text-xs" style={{ color: "#6E675C" }}>Ate
+            <label className="text-xs" style={{ color: "#6B7280" }}>Ate
               <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl} />
             </label>
           </>
         )}
-        <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1A1815", color: "#F5EFE2" }}>Atualizar</button>
-        <button onClick={baixarExcel} disabled={!linhas.length} className="px-3 py-2 rounded-lg border text-sm disabled:opacity-50" style={{ color: "#1A1815", borderColor: "#E4DCCB" }}>Baixar Excel</button>
-        <span className="text-xs" style={{ color: "#948B7C" }}>{iv.ini} a {iv.fim}</span>
+        <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1F2937", color: "#F4F5F7" }}>Atualizar</button>
+        <button onClick={baixarExcel} disabled={!linhas.length} className="px-3 py-2 rounded-lg border text-sm disabled:opacity-50" style={{ color: "#1F2937", borderColor: "#E5E7EB" }}>Baixar Excel</button>
+        <span className="text-xs" style={{ color: "#9CA3AF" }}>{iv.ini} a {iv.fim}</span>
       </div>
 
-      {erro && <p className="text-sm" style={{ color: "#B4462F" }}>Erro: {erro}</p>}
+      {erro && <p className="text-sm" style={{ color: "#DC2626" }}>Erro: {erro}</p>}
 
       <div className="grid grid-cols-3 gap-3">
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Total materia-prima</p><p className="text-lg font-semibold">{BRL(totLaser + totRouter)}</p></div>
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>LASER</p><p className="text-lg font-semibold">{BRL(totLaser)}</p></div>
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>ROUTER</p><p className="text-lg font-semibold">{BRL(totRouter)}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>Total materia-prima</p><p className="text-lg font-semibold">{BRL(totLaser + totRouter)}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>LASER</p><p className="text-lg font-semibold">{BRL(totLaser)}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>ROUTER</p><p className="text-lg font-semibold">{BRL(totRouter)}</p></div>
       </div>
 
       {carregando ? (
-        <p className="text-sm" style={{ color: "#948B7C" }}>Calculando...</p>
+        <p className="text-sm" style={{ color: "#9CA3AF" }}>Calculando...</p>
       ) : !linhas.length ? (
-        <div style={card}><p className="text-sm" style={{ color: "#6E675C" }}>Sem consumo no periodo.</p></div>
+        <div style={card}><p className="text-sm" style={{ color: "#6B7280" }}>Sem consumo no periodo.</p></div>
       ) : (
         <div className="overflow-x-auto" style={card}>
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ color: "#948B7C", textAlign: "left" }}>
+              <tr style={{ color: "#9CA3AF", textAlign: "left" }}>
                 <th className="py-2 pr-3">Empresa</th><th className="py-2 pr-3">Fornecedor</th>
                 <th className="py-2 pr-3">Insumo</th><th className="py-2 pr-3 text-right">Quantidade</th>
                 <th className="py-2 pr-3 text-right">Custo</th>
@@ -2795,8 +2816,8 @@ function Relatorios({ produtos, insumos, fornecedores }) {
             </thead>
             <tbody>
               {linhas.map((l, i) => (
-                <tr key={i} style={{ borderTop: "1px solid #F0EADD" }}>
-                  <td className="py-2 pr-3"><span className="px-2 py-0.5 rounded text-[11px]" style={{ background: l.empresa === "ROUTER" ? "#E8EEF6" : "#F3ECDD", color: "#4A443A" }}>{l.empresa}</span></td>
+                <tr key={i} style={{ borderTop: "1px solid #EEF0F2" }}>
+                  <td className="py-2 pr-3"><span className="px-2 py-0.5 rounded text-[11px]" style={{ background: l.empresa === "ROUTER" ? "#EFF6FF" : "#F1F5F9", color: "#374151" }}>{l.empresa}</span></td>
                   <td className="py-2 pr-3">{l.fornecedor}</td>
                   <td className="py-2 pr-3">{l.codigo ? l.codigo + " — " : ""}{l.insumo}</td>
                   <td className="py-2 pr-3 text-right">{(Math.round(l.quantidade * 1000) / 1000).toLocaleString("pt-BR")} {l.unidade}</td>
@@ -2821,6 +2842,8 @@ function Clientes() {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState("");
   const [busca, setBusca] = useState("");
+  const [pagCli, setPagCli] = useState(1);
+  const POR_PAGINA = 50;
 
   const isoD = (d) => d.toISOString().slice(0, 10);
   function intervalo() {
@@ -2875,6 +2898,11 @@ function Clientes() {
     return lista.sort((a, b) => String(b.ultima).localeCompare(String(a.ultima)));
   }, [vendas, busca]);
 
+  useEffect(() => { setPagCli(1); }, [busca, periodo, dataIni, dataFim, vendas.length]);
+  const totalPagCli = Math.max(1, Math.ceil(clientes.length / POR_PAGINA));
+  const pagCliAtual = Math.min(pagCli, totalPagCli);
+  const clientesPagina = clientes.slice((pagCliAtual - 1) * POR_PAGINA, pagCliAtual * POR_PAGINA);
+
   async function baixarExcel() {
     const XLSX = await import("xlsx");
     const rows = clientes.map((c) => ({
@@ -2887,17 +2915,17 @@ function Clientes() {
     XLSX.writeFile(wb, "clientes.xlsx");
   }
 
-  const card = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
-  const ctrl = { borderColor: "#E4DCCB", background: "#FFFFFF" };
+  const card = { background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 12, padding: 16 };
+  const ctrl = { borderColor: "#E5E7EB", background: "#FFFFFF" };
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBF6E9", border: "1px solid #E8D9A8", color: "#6B5A1E" }}>
+      <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#475569" }}>
         Clientes que compraram, montados a partir dos pedidos do Tiny. Campos disponiveis: nome, telefone, cidade/UF e e-mail (sexo e idade nao vem nos pedidos). Use para conhecer seu publico e, no futuro, disparos de mensagens.
       </div>
 
       <div className="flex flex-wrap items-end gap-2">
-        <label className="text-xs" style={{ color: "#6E675C" }}>Periodo
+        <label className="text-xs" style={{ color: "#6B7280" }}>Periodo
           <select value={periodo} onChange={(e) => setPeriodo(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
             <option value="tudo">Tudo</option>
             <option value="semana">Ultimos 7 dias</option>
@@ -2907,46 +2935,46 @@ function Clientes() {
         </label>
         {periodo === "custom" && (
           <>
-            <label className="text-xs" style={{ color: "#6E675C" }}>De
+            <label className="text-xs" style={{ color: "#6B7280" }}>De
               <input type="date" value={dataIni} onChange={(e) => setDataIni(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl} />
             </label>
-            <label className="text-xs" style={{ color: "#6E675C" }}>Ate
+            <label className="text-xs" style={{ color: "#6B7280" }}>Ate
               <input type="date" value={dataFim} onChange={(e) => setDataFim(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl} />
             </label>
           </>
         )}
-        <label className="text-xs flex-1 min-w-[180px]" style={{ color: "#6E675C" }}>Buscar
+        <label className="text-xs flex-1 min-w-[180px]" style={{ color: "#6B7280" }}>Buscar
           <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Nome, cidade, telefone..." className="block w-full px-2 py-2 rounded-lg border text-sm" style={ctrl} />
         </label>
-        <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1A1815", color: "#F5EFE2" }}>Atualizar</button>
-        <button onClick={baixarExcel} disabled={!clientes.length} className="px-3 py-2 rounded-lg border text-sm disabled:opacity-50" style={{ color: "#1A1815", borderColor: "#E4DCCB" }}>Baixar Excel</button>
+        <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1F2937", color: "#F4F5F7" }}>Atualizar</button>
+        <button onClick={baixarExcel} disabled={!clientes.length} className="px-3 py-2 rounded-lg border text-sm disabled:opacity-50" style={{ color: "#1F2937", borderColor: "#E5E7EB" }}>Baixar Excel</button>
       </div>
 
-      {erro && <p className="text-sm" style={{ color: "#B4462F" }}>Erro: {erro}</p>}
+      {erro && <p className="text-sm" style={{ color: "#DC2626" }}>Erro: {erro}</p>}
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Clientes</p><p className="text-lg font-semibold">{clientes.length}</p></div>
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Com telefone</p><p className="text-lg font-semibold">{clientes.filter((c) => c.telefone).length}</p></div>
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Com e-mail</p><p className="text-lg font-semibold">{clientes.filter((c) => c.email).length}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>Clientes</p><p className="text-lg font-semibold">{clientes.length}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>Com telefone</p><p className="text-lg font-semibold">{clientes.filter((c) => c.telefone).length}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>Com e-mail</p><p className="text-lg font-semibold">{clientes.filter((c) => c.email).length}</p></div>
       </div>
 
       {carregando ? (
-        <p className="text-sm" style={{ color: "#948B7C" }}>Carregando...</p>
+        <p className="text-sm" style={{ color: "#9CA3AF" }}>Carregando...</p>
       ) : !clientes.length ? (
-        <div style={card}><p className="text-sm" style={{ color: "#6E675C" }}>Nenhum cliente no periodo.</p></div>
+        <div style={card}><p className="text-sm" style={{ color: "#6B7280" }}>Nenhum cliente no periodo.</p></div>
       ) : (
         <div className="overflow-x-auto" style={card}>
           <table className="w-full text-sm">
             <thead>
-              <tr style={{ color: "#948B7C", textAlign: "left" }}>
+              <tr style={{ color: "#9CA3AF", textAlign: "left" }}>
                 <th className="py-2 pr-3">Nome</th><th className="py-2 pr-3">Telefone</th>
                 <th className="py-2 pr-3">Cidade/UF</th><th className="py-2 pr-3">E-mail</th>
                 <th className="py-2 pr-3 text-right">Pedidos</th><th className="py-2 pr-3 text-right">Total</th><th className="py-2 pr-3">Ultima</th>
               </tr>
             </thead>
             <tbody>
-              {clientes.map((c, i) => (
-                <tr key={i} style={{ borderTop: "1px solid #F0EADD" }}>
+              {clientesPagina.map((c, i) => (
+                <tr key={i} style={{ borderTop: "1px solid #EEF0F2" }}>
                   <td className="py-2 pr-3">{c.nome || "—"}</td>
                   <td className="py-2 pr-3">{c.telefone || "—"}</td>
                   <td className="py-2 pr-3">{c.cidade}{c.uf ? "/" + c.uf : ""}</td>
@@ -2958,6 +2986,20 @@ function Clientes() {
               ))}
             </tbody>
           </table>
+          <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
+            <span className="text-xs" style={{ color: "#9CA3AF" }}>
+              Mostrando {(pagCliAtual - 1) * POR_PAGINA + 1}–{Math.min(pagCliAtual * POR_PAGINA, clientes.length)} de {clientes.length}
+            </span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPagCli(pagCliAtual - 1)} disabled={pagCliAtual <= 1}
+                className="px-3 py-1.5 rounded-lg border text-sm disabled:opacity-40"
+                style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>← Anterior</button>
+              <span className="text-xs" style={{ color: "#6B7280" }}>Página {pagCliAtual} de {totalPagCli}</span>
+              <button onClick={() => setPagCli(pagCliAtual + 1)} disabled={pagCliAtual >= totalPagCli}
+                className="px-3 py-1.5 rounded-lg border text-sm disabled:opacity-40"
+                style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>Próxima →</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -3006,41 +3048,41 @@ function Usuarios() {
   async function alterar(em, novo) { await supabase.from("perfis").update({ setor: novo }).eq("email", em); carregar(); }
   async function remover(em) { await supabase.from("perfis").delete().eq("email", em); carregar(); }
 
-  const card = { background: "#FFFFFF", border: "1px solid #E4DCCB", borderRadius: 12, padding: 16 };
-  const ctrl = { borderColor: "#E4DCCB", background: "#FFFFFF" };
+  const card = { background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 12, padding: 16 };
+  const ctrl = { borderColor: "#E5E7EB", background: "#FFFFFF" };
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#FBF6E9", border: "1px solid #E8D9A8", color: "#6B5A1E" }}>
+      <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#475569" }}>
         Defina o setor de cada pessoa. O login em si é criado no Supabase (Authentication); aqui você só liga o <strong>e-mail</strong> ao <strong>setor</strong>, que controla quais abas a pessoa vê. (Trava de interface — organiza acessos do dia a dia.)
       </div>
 
       <div style={card}>
         <p className="text-sm font-semibold mb-3">Adicionar / atualizar acesso</p>
         <div className="flex flex-wrap items-end gap-2">
-          <label className="text-xs flex-1 min-w-[220px]" style={{ color: "#6E675C" }}>E-mail da pessoa
+          <label className="text-xs flex-1 min-w-[220px]" style={{ color: "#6B7280" }}>E-mail da pessoa
             <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="pessoa@email.com" className="block w-full px-2 py-2 rounded-lg border text-sm" style={ctrl} />
           </label>
-          <label className="text-xs" style={{ color: "#6E675C" }}>Setor
+          <label className="text-xs" style={{ color: "#6B7280" }}>Setor
             <select value={setor} onChange={(e) => setSetor(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
               {SETORES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
           </label>
-          <button onClick={salvar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1A1815", color: "#F5EFE2" }}>Salvar</button>
+          <button onClick={salvar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1F2937", color: "#F4F5F7" }}>Salvar</button>
         </div>
-        {erro && <p className="text-sm mt-2" style={{ color: "#B4462F" }}>Erro: {erro}</p>}
+        {erro && <p className="text-sm mt-2" style={{ color: "#DC2626" }}>Erro: {erro}</p>}
       </div>
 
       <div className="overflow-x-auto" style={card}>
         <table className="w-full text-sm">
           <thead>
-            <tr style={{ color: "#948B7C", textAlign: "left" }}>
+            <tr style={{ color: "#9CA3AF", textAlign: "left" }}>
               <th className="py-2 pr-3">E-mail</th><th className="py-2 pr-3">Setor</th><th className="py-2 pr-3"></th>
             </tr>
           </thead>
           <tbody>
             {lista.map((u) => (
-              <tr key={u.email} style={{ borderTop: "1px solid #F0EADD" }}>
+              <tr key={u.email} style={{ borderTop: "1px solid #EEF0F2" }}>
                 <td className="py-2 pr-3">{u.email}</td>
                 <td className="py-2 pr-3">
                   <select value={u.setor} onChange={(e) => alterar(u.email, e.target.value)} className="px-2 py-1 rounded border text-sm" style={ctrl} title={nomeSetor(u.setor)}>
@@ -3052,7 +3094,7 @@ function Usuarios() {
                 </td>
               </tr>
             ))}
-            {!lista.length && <tr><td colSpan={3} className="py-3" style={{ color: "#6E675C" }}>Nenhum acesso definido ainda.</td></tr>}
+            {!lista.length && <tr><td colSpan={3} className="py-3" style={{ color: "#6B7280" }}>Nenhum acesso definido ainda.</td></tr>}
           </tbody>
         </table>
       </div>
