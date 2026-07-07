@@ -796,11 +796,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen" style={{ background: "#F4F5F7", color: "#111827", fontFamily: "'Avenir Next','Segoe UI',system-ui,sans-serif" }}>
-      <header style={{ background: "#0F172A", borderBottom: "1px solid #1E293B" }}>
-        <div className="max-w-6xl mx-auto px-4 py-5 flex items-end justify-between flex-wrap gap-3">
-          <div>
-            <p className="text-xs tracking-[0.2em] uppercase" style={{ color: "#94A3B8" }}>Galuno Artesanato</p>
-            <h1 className="text-2xl font-semibold text-white">Sistema de Precificação</h1>
+      <header style={{ background: "#1E2125", borderBottom: "1px solid #2A2E33" }}>
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <img src="data:image/png;base64,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" alt="Galuno Artesanato"
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
+              style={{ width: 46, height: 46, borderRadius: "9999px", flexShrink: 0 }} />
+            <h1 className="text-2xl font-bold uppercase tracking-wide text-white">Galuno Artesanato</h1>
           </div>
           <p className="text-xs font-medium px-3 py-1 rounded-full" style={{ background: salvo ? "rgba(22,163,74,0.18)" : "rgba(245,158,11,0.18)", color: salvo ? "#86EFAC" : "#FCD34D" }}>{salvo ? "✓ Tudo salvo" : "Salvando…"}</p>
         </div>
