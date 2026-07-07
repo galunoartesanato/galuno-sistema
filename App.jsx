@@ -2210,10 +2210,24 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
   const [dataFim, setDataFim] = useState("");
 
   async function carregar() {
-    const { data, error } = await supabase
-      .from("vendas").select("*").order("data_pedido", { ascending: false }).limit(3000);
-    if (error) setErro(error.message);
-    else { setVendas(data || []); setErro(""); }
+    // O Supabase limita cada requisição a 1000 linhas (o .limit(3000) era
+    // ignorado). Aqui buscamos em páginas de 1000 até trazer TODOS os pedidos,
+    // senão os totais (faturamento etc.) ficam incompletos em dias movimentados.
+    const tamanho = 1000;
+    let inicio = 0, todas = [], erroMsg = "";
+    for (;;) {
+      const { data, error } = await supabase
+        .from("vendas").select("*")
+        .order("data_pedido", { ascending: false })
+        .range(inicio, inicio + tamanho - 1);
+      if (error) { erroMsg = error.message; break; }
+      todas = todas.concat(data || []);
+      if (!data || data.length < tamanho) break;
+      inicio += tamanho;
+      if (inicio > 200000) break; // trava de seguranca
+    }
+    if (erroMsg) setErro(erroMsg);
+    else { setVendas(todas); setErro(""); }
     setCarregando(false);
   }
   useEffect(() => {
