@@ -2294,10 +2294,10 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
       }
     }
     const lucro = receita - custo - taxas - imposto;
-    // Faturamento igual ao Tiny, SEM frete = total do pedido (valor_total) menos o frete.
+    // Faturamento = total do pedido COM frete, já descontados só os descontos.
+    // É o valor_total do Tiny (= produtos + frete - desconto).
     // receita/custo/lucro/margem continuam por item (base de custo); faturamento é a linha de topo.
-    const frete = num(v.payload_raw && v.payload_raw.valor_frete);
-    const faturamento = num(v.valor_total) - frete;
+    const faturamento = num(v.valor_total);
     return { receita, faturamento, custo, taxas, imposto, lucro, margem: receita ? (lucro / receita) * 100 : 0, mp, semSku };
   }
 
@@ -2373,7 +2373,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
       </div>
       {erro && <p className="text-sm mb-3" style={{ color: "#B4462F" }}>Erro: {erro}</p>}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
-        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Faturamento <span title="Total do pedido (valor_total) sem o frete — igual ao Tiny">ⓘ</span></p><p className="text-lg font-semibold">{BRL(tot.faturamento)}</p></div>
+        <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Faturamento <span title="Total do pedido com frete, já descontados os descontos (valor_total, igual ao Tiny)">ⓘ</span></p><p className="text-lg font-semibold">{BRL(tot.faturamento)}</p></div>
         <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Lucro</p><p className="text-lg font-semibold" style={{ color: tot.lucro >= 0 ? "#2E7D4F" : "#B4462F" }}>{BRL(tot.lucro)}</p></div>
         <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>Margem media</p><p className="text-lg font-semibold">{isFinite(margemMedia) ? margemMedia.toFixed(1) + "%" : "—"}</p></div>
         <div style={card}><p className="text-xs" style={{ color: "#948B7C" }}>N de vendas</p><p className="text-lg font-semibold">{linhas.length}</p></div>
