@@ -2297,6 +2297,9 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
   const [dataIni, setDataIni] = useState("");
   const [dataFim, setDataFim] = useState("");
   const [pagina, setPagina] = useState(1);
+  const [subAba, setSubAba] = useState("pedidos");
+  const [pagSku, setPagSku] = useState(1);
+  const [ordSku, setOrdSku] = useState("lucro");
   const POR_PAGINA = 50;
 
   async function carregar() {
@@ -2418,6 +2421,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
   const linhas = filtro === "pagos" ? linhasBase.filter(({ v }) => ehPaga(v.situacao)) : linhasBase;
   // volta para a página 1 quando muda filtro/busca/dados
   useEffect(() => { setPagina(1); }, [empresa, canalF, filtro, busca, dataIni, dataFim, vendas.length]);
+  useEffect(() => { setPagSku(1); }, [empresa, canalF, filtro, busca, dataIni, dataFim, vendas.length, ordSku]);
   const totalPaginas = Math.max(1, Math.ceil(linhas.length / POR_PAGINA));
   const paginaAtual = Math.min(pagina, totalPaginas);
   const linhasPagina = linhas.slice((paginaAtual - 1) * POR_PAGINA, paginaAtual * POR_PAGINA);
@@ -2445,6 +2449,68 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
     return Object.entries(m).sort((a, b) => a[0].localeCompare(b[0])).slice(-14)
       .map(([d, valor]) => ({ label: d.slice(8, 10) + "/" + d.slice(5, 7), valor }));
   })();
+
+  // ====== ranking por SKU (lucro por item, respeita os filtros ativos) ======
+  const porSku = (() => {
+    const m = {};
+    for (const { v, c } of linhas) {
+      const mp = c.mp;
+      for (const it of v.itens || []) {
+        const q = num(it.quantidade) || 0;
+        const pu = num(it.valor_unitario) || 0;
+        const prod = casarSku(it.sku, produtos);
+        const receita = pu * q;
+        let custo = 0, imposto = 0, taxas = 0;
+        if (prod) {
+          custo = custoProduto(prod, insumos) * q;
+          imposto = pu * q * (num(prod.imposto) / 100);
+          taxas = mp ? taxasDoPreco(mp, pu, pesoConsiderado(prod)) * q : 0;
+        } else {
+          taxas = mp ? taxasDoPreco(mp, pu, 0) * q : 0;
+        }
+        const lucro = receita - custo - taxas - imposto;
+        const sku = String(it.sku || "").trim() || "(sem SKU)";
+        const k = sku.toLowerCase();
+        if (!m[k]) m[k] = { sku, nome: (prod && prod.nome) || it.descricao || "(sem cadastro)", empresa: prod ? (prod.empresa || empresaDoSku(prod.sku) || "") : "", temProd: !!prod, qtd: 0, pedidos: new Set(), receita: 0, custo: 0, taxas: 0, imposto: 0, lucro: 0 };
+        const r = m[k];
+        if (prod && !r.temProd) { r.temProd = true; r.nome = prod.nome; r.empresa = prod.empresa || empresaDoSku(prod.sku) || ""; }
+        r.qtd += q; r.receita += receita; r.custo += custo; r.taxas += taxas; r.imposto += imposto; r.lucro += lucro;
+        r.pedidos.add(v.id);
+      }
+    }
+    const arr = Object.values(m).map((r) => ({
+      sku: r.sku, nome: r.nome, empresa: r.empresa, temProd: r.temProd,
+      qtd: r.qtd, pedidos: r.pedidos.size, receita: r.receita, custo: r.custo,
+      encargos: r.taxas + r.imposto, lucro: r.lucro,
+      margem: r.receita ? (r.lucro / r.receita) * 100 : 0,
+      lucroUnit: r.qtd ? r.lucro / r.qtd : 0,
+    }));
+    const ord = { lucro: (a, b) => b.lucro - a.lucro, qtd: (a, b) => b.qtd - a.qtd, margem: (a, b) => b.margem - a.margem, receita: (a, b) => b.receita - a.receita };
+    return arr.sort(ord[ordSku] || ord.lucro);
+  })();
+  const skuTop = porSku.slice(0, 10).map((r) => ({ label: r.sku.length > 14 ? r.sku.slice(0, 13) + "…" : r.sku, valor: r.lucro }));
+  const totSku = porSku.reduce((s, r) => ({ lucro: s.lucro + r.lucro, receita: s.receita + r.receita, qtd: s.qtd + r.qtd }), { lucro: 0, receita: 0, qtd: 0 });
+  const totalPagSku = Math.max(1, Math.ceil(porSku.length / POR_PAGINA));
+  const pagSkuAtual = Math.min(pagSku, totalPagSku);
+  const skuPagina = porSku.slice((pagSkuAtual - 1) * POR_PAGINA, pagSkuAtual * POR_PAGINA);
+
+  async function baixarSkuExcel() {
+    const XLSX = await import("xlsx");
+    const rows = porSku.map((r) => ({
+      SKU: r.sku, Produto: r.nome, Empresa: r.empresa,
+      "Qtd vendida": r.qtd, Pedidos: r.pedidos,
+      "Receita (R$)": Math.round(r.receita * 100) / 100,
+      "Custo (R$)": Math.round(r.custo * 100) / 100,
+      "Taxas+Imposto (R$)": Math.round(r.encargos * 100) / 100,
+      "Lucro (R$)": Math.round(r.lucro * 100) / 100,
+      "Lucro/un (R$)": Math.round(r.lucroUnit * 100) / 100,
+      "Margem (%)": Math.round(r.margem * 10) / 10,
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Ranking SKU");
+    XLSX.writeFile(wb, "ranking-sku-lucro.xlsx");
+  }
 
   // ====== previsão de recebimento (dias após entrega, por marketplace) ======
   const hoje0 = new Date(); hoje0.setHours(0, 0, 0, 0);
@@ -2484,6 +2550,17 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
         </div>
         <button onClick={carregar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1F2937", color: "#F4F5F7" }}>Atualizar</button>
       </div>
+      <div className="flex gap-2 mb-4">
+        {[["pedidos", "Pedidos"], ["skus", "Ranking de SKUs"]].map(([k, rotulo]) => (
+          <button key={k} onClick={() => setSubAba(k)}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={subAba === k
+              ? { background: "#1F2937", color: "#F4F5F7" }
+              : { background: "#F1F5F9", color: "#475569" }}>
+            {rotulo}
+          </button>
+        ))}
+      </div>
       <div className="flex flex-wrap items-end gap-2 mb-4">
         <label className="text-xs" style={{ color: "#6B7280" }}>Empresa
           <select value={empresa} onChange={(e) => setEmpresa(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
@@ -2512,6 +2589,8 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
         <button onClick={limpar} className="px-3 py-2 rounded-lg border text-sm" style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>Limpar</button>
       </div>
       {erro && <p className="text-sm mb-3" style={{ color: "#DC2626" }}>Erro: {erro}</p>}
+      {subAba === "pedidos" && (
+      <>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
         <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>Faturamento <span title="Total do pedido com frete, já descontados os descontos (valor_total, igual ao Tiny)">ⓘ</span></p><p className="text-lg font-semibold">{BRL(tot.faturamento)}</p></div>
         <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>Lucro</p><p className="text-lg font-semibold" style={{ color: tot.lucro >= 0 ? "#16A34A" : "#DC2626" }}>{BRL(tot.lucro)}</p></div>
@@ -2598,6 +2677,88 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
           </div>
           <p className="text-[11px] mt-3" style={{ color: "#9CA3AF" }}>"Somente pagos" exclui em aberto/cancelados/incompletos. Empresa vem do produto (regra de SKU, editavel). ⚠ = item sem SKU no catalogo.</p>
         </div>
+      )}
+      </>
+      )}
+
+      {subAba === "skus" && (
+        carregando ? (
+          <p className="text-sm" style={{ color: "#9CA3AF" }}>Carregando vendas...</p>
+        ) : !porSku.length ? (
+          <div style={card}><p className="text-sm" style={{ color: "#6B7280" }}>Nenhuma venda com esses filtros.</p></div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+              <div style={{ ...card, borderLeft: "4px solid #16A34A" }}><p className="text-xs" style={{ color: "#9CA3AF" }}>Lucro total (itens)</p><p className="text-lg font-semibold" style={{ color: totSku.lucro >= 0 ? "#16A34A" : "#DC2626" }}>{BRL(totSku.lucro)}</p></div>
+              <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>SKUs distintos</p><p className="text-lg font-semibold">{porSku.length}</p></div>
+              <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>Unidades vendidas</p><p className="text-lg font-semibold">{totSku.qtd.toLocaleString("pt-BR")}</p></div>
+              <div style={card}><p className="text-xs" style={{ color: "#9CA3AF" }}>Margem media</p><p className="text-lg font-semibold">{totSku.receita ? (totSku.lucro / totSku.receita * 100).toFixed(1) + "%" : "—"}</p></div>
+            </div>
+
+            <div className="mb-5">
+              <Torre titulo="Top 10 SKUs por lucro" dados={skuTop} cor="#16A34A" formato={BRLk} />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <label className="text-xs" style={{ color: "#6B7280" }}>Ordenar por
+                <select value={ordSku} onChange={(e) => setOrdSku(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
+                  <option value="lucro">Maior lucro</option>
+                  <option value="qtd">Mais vendidos (un.)</option>
+                  <option value="margem">Maior margem</option>
+                  <option value="receita">Maior receita</option>
+                </select>
+              </label>
+              <button onClick={baixarSkuExcel} className="px-3 py-2 rounded-lg border text-sm self-end" style={{ color: "#1F2937", borderColor: "#E5E7EB" }}>Baixar Excel</button>
+            </div>
+
+            <div className="overflow-x-auto" style={card}>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr style={{ color: "#9CA3AF", textAlign: "left" }}>
+                    <th className="py-2 pr-3">#</th><th className="py-2 pr-3">SKU</th><th className="py-2 pr-3">Produto</th><th className="py-2 pr-3">Empresa</th>
+                    <th className="py-2 pr-3 text-right">Qtd</th><th className="py-2 pr-3 text-right">Pedidos</th>
+                    <th className="py-2 pr-3 text-right">Receita</th><th className="py-2 pr-3 text-right">Custo</th>
+                    <th className="py-2 pr-3 text-right">Taxas+Imp.</th><th className="py-2 pr-3 text-right">Lucro</th>
+                    <th className="py-2 pr-3 text-right">Lucro/un</th><th className="py-2 pr-3 text-right">Margem</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {skuPagina.map((r, i) => (
+                    <tr key={r.sku} style={{ borderTop: "1px solid #EEF0F2", opacity: r.temProd ? 1 : 0.6 }}>
+                      <td className="py-2 pr-3" style={{ color: "#9CA3AF" }}>{(pagSkuAtual - 1) * POR_PAGINA + i + 1}</td>
+                      <td className="py-2 pr-3 font-medium">{r.sku}{r.temProd ? "" : " ⚠"}</td>
+                      <td className="py-2 pr-3">{r.nome}</td>
+                      <td className="py-2 pr-3">{r.empresa ? <span className="px-2 py-0.5 rounded text-[11px]" style={{ background: r.empresa === "ROUTER" ? "#EFF6FF" : "#F1F5F9", color: "#374151" }}>{r.empresa}</span> : "—"}</td>
+                      <td className="py-2 pr-3 text-right">{r.qtd.toLocaleString("pt-BR")}</td>
+                      <td className="py-2 pr-3 text-right">{r.pedidos}</td>
+                      <td className="py-2 pr-3 text-right">{BRL(r.receita)}</td>
+                      <td className="py-2 pr-3 text-right">{BRL(r.custo)}</td>
+                      <td className="py-2 pr-3 text-right">{BRL(r.encargos)}</td>
+                      <td className="py-2 pr-3 text-right" style={{ color: r.lucro >= 0 ? "#16A34A" : "#DC2626", fontWeight: 600 }}>{BRL(r.lucro)}</td>
+                      <td className="py-2 pr-3 text-right" style={{ color: r.lucroUnit >= 0 ? "#16A34A" : "#DC2626" }}>{BRL(r.lucroUnit)}</td>
+                      <td className="py-2 pr-3 text-right">{isFinite(r.margem) ? r.margem.toFixed(0) + "%" : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="flex flex-wrap items-center justify-between gap-2 mt-3">
+                <span className="text-xs" style={{ color: "#9CA3AF" }}>
+                  Mostrando {(pagSkuAtual - 1) * POR_PAGINA + 1}–{Math.min(pagSkuAtual * POR_PAGINA, porSku.length)} de {porSku.length}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setPagSku(pagSkuAtual - 1)} disabled={pagSkuAtual <= 1}
+                    className="px-3 py-1.5 rounded-lg border text-sm disabled:opacity-40"
+                    style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>← Anterior</button>
+                  <span className="text-xs" style={{ color: "#6B7280" }}>Página {pagSkuAtual} de {totalPagSku}</span>
+                  <button onClick={() => setPagSku(pagSkuAtual + 1)} disabled={pagSkuAtual >= totalPagSku}
+                    className="px-3 py-1.5 rounded-lg border text-sm disabled:opacity-40"
+                    style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>Próxima →</button>
+                </div>
+              </div>
+              <p className="text-[11px] mt-3" style={{ color: "#9CA3AF" }}>Lucro por item = receita − custo (ficha técnica) − taxas do marketplace − imposto. Respeita os filtros acima (empresa, marketplace, situação, período). ⚠ = SKU sem cadastro no catálogo (custo/taxas podem ficar incompletos).</p>
+            </div>
+          </>
+        )
       )}
     </div>
   );
