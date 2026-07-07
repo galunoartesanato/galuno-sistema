@@ -275,8 +275,15 @@ function totalColaboradores(lista) {
 // Custo da montagem (ex.: cilindro) = total colaboradores ÷ (média/dia × diasMes)
 function custoMontagem(fab) {
   if (!fab.montagem) return null;
-  const total = totalColaboradores(fab.montagem.colaboradores);
-  const div = num(fab.montagem.mediaDia) * (num(fab.diasMes) || 22);
+  const m = fab.montagem;
+  // Se a lista de colaboradores está carregada (dono/financeiro/rh), usa ela.
+  // Senão (setor 'vendas'), usa o total agregado guardado no balde principal —
+  // assim o preço é calculado sem receber nome/salário de ninguém.
+  const total =
+    Array.isArray(m.colaboradores) && m.colaboradores.length
+      ? totalColaboradores(m.colaboradores)
+      : num(m.custoColaboradores);
+  const div = num(m.mediaDia) * (num(fab.diasMes) || 22);
   return div > 0 ? total / div : 0;
 }
 
@@ -676,7 +683,24 @@ export default function App() {
   const setMkt = (id, patch) =>
     setData((d) => ({ ...d, marketplaces: d.marketplaces.map((m) => (m.id === id ? { ...m, ...patch } : m)) }));
   const setFab = (id, patch) =>
-    setData((d) => ({ ...d, fabricas: d.fabricas.map((f) => (f.id === id ? { ...f, ...patch } : f)) }));
+    setData((d) => ({
+      ...d,
+      fabricas: d.fabricas.map((f) => {
+        if (f.id !== id) return f;
+        const nf = { ...f, ...patch };
+        // Ao mexer na equipe de montagem, mantém o total agregado em dia. Esse
+        // número (não a lista de salários) é o que vai para o balde principal e
+        // permite ao setor 'vendas' calcular o custo de montagem.
+        if (patch.montagem) {
+          const mont = { ...patch.montagem };
+          if (Array.isArray(mont.colaboradores) && mont.colaboradores.length) {
+            mont.custoColaboradores = totalColaboradores(mont.colaboradores);
+          }
+          nf.montagem = mont;
+        }
+        return nf;
+      }),
+    }));
   const setInsumoCampo = (id, patch) =>
     setData((d) => ({ ...d, insumos: d.insumos.map((i) => (i.id === id ? { ...i, ...patch } : i)) }));
   const nomeFornecedor = (fid) => (fornecedores.find((f) => f.id === fid) || {}).nome || "";

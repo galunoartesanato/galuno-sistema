@@ -6,23 +6,26 @@ import { supabase } from "./supabaseClient";
 // dados juntos. Qualquer pessoa logada baixava tudo.
 //
 // AGORA: os dados sensíveis ficam em "baldes" separados (outras linhas de
-// app_estado), cada um com sua própria regra de acesso (RLS) no banco. Assim,
-// quem não pode ver aquele balde não recebe os dados nem pela API — não é só a
-// tela que esconde.
+// app_estado), cada um com sua própria regra de acesso (RLS) no banco. Quem não
+// pode ver aquele balde não recebe os dados nem pela API — não é só a tela.
 //
-// A interface get/set continua a mesma, então o App praticamente não muda: o
-// split/junção acontece aqui dentro.
+// A interface get/set continua a mesma; o split/junção acontece aqui dentro.
 //
-// Fase 1a: balde 'financeiro'. (Fase 1b adicionará 'rh' com os colaboradores.)
+//   Balde 'financeiro'  -> data.financeiro           (dono, financeiro)
+//   Balde 'rh'          -> colaboradores das fábricas (dono, financeiro, rh)
+//
+// Para o RH: as listas de colaboradores (com nome/salário) saem de dentro de
+// 'fabricas' e vão para o balde 'rh'. No principal, cada fábrica guarda só o
+// total agregado (custosFixos / montagem.custoColaboradores), que é o que a
+// precificação usa. Assim o setor 'vendas' calcula preço sem ver salário.
 
-// Mapa: chave do estado -> id do balde (linha) em app_estado.
+// Baldes que são uma chave simples do estado.
 const BALDES = {
   financeiro: "financeiro",
-  // rh: "rh",  // <- Fase 1b
 };
 
-// Marca quais baldes foram realmente carregados nesta sessão. Só gravamos um
-// balde que foi lido — assim um usuário sem acesso nunca apaga o dado de quem tem.
+// Marca quais baldes foram lidos nesta sessão. Só gravamos um balde que foi
+// lido — assim um usuário sem acesso nunca apaga o dado de quem tem.
 const carregado = {};
 
 async function lerBalde(id) {
@@ -34,6 +37,44 @@ async function lerBalde(id) {
     .maybeSingle();
   if (error) throw error;
   return data ? data.dados : null;
+}
+
+// Injeta as listas de colaboradores (vindas do balde 'rh') de volta em fabricas.
+function injetarRH(fabricas, rh) {
+  return (fabricas || []).map((f) => {
+    const r = (rh && rh[f.id]) || {};
+    const nf = { ...f, colaboradores: r.colaboradores || [] };
+    if (nf.montagem) {
+      nf.montagem = { ...nf.montagem, colaboradores: r.montagem || [] };
+    }
+    return nf;
+  });
+}
+
+// Garante que 'colaboradores' exista (vazio) mesmo sem acesso ao balde 'rh',
+// para a interface não quebrar. O preço usa o agregado, não a lista.
+function fabricasSemRH(fabricas) {
+  return (fabricas || []).map((f) => {
+    const nf = { ...f, colaboradores: f.colaboradores || [] };
+    if (nf.montagem && !nf.montagem.colaboradores) {
+      nf.montagem = { ...nf.montagem, colaboradores: [] };
+    }
+    return nf;
+  });
+}
+
+// Tira as listas de colaboradores das fábricas (o que vai para o principal).
+// Mantém os agregados (custosFixos, montagem.custoColaboradores).
+function fabricasParaPrincipal(fabricas) {
+  return (fabricas || []).map((f) => {
+    const nf = { ...f };
+    delete nf.colaboradores;
+    if (nf.montagem) {
+      nf.montagem = { ...nf.montagem };
+      delete nf.montagem.colaboradores;
+    }
+    return nf;
+  });
 }
 
 export const supabaseStorage = {
@@ -49,6 +90,7 @@ export const supabaseStorage = {
 
     const estado = { ...principal };
 
+    // Baldes de chave simples (financeiro).
     for (const [chave, id] of Object.entries(BALDES)) {
       let val = null;
       try {
@@ -56,19 +98,28 @@ export const supabaseStorage = {
       } catch (_e) {
         val = null;
       }
-
       if (val !== null && val !== undefined) {
-        // Balde existe e tenho acesso -> uso o balde e marco para poder gravar.
         estado[chave] = val;
         carregado[id] = true;
       } else {
-        // Balde ainda não existe (pré-migração) ou sem acesso.
-        // Se o principal ainda tiver essa chave (compatibilidade com o modelo
-        // antigo), mantém o valor dele; senão, vazio. NÃO marco como carregado,
-        // então o set() não vai apagar nada.
         if (!(chave in estado)) estado[chave] = [];
         carregado[id] = false;
       }
+    }
+
+    // Balde 'rh' (colaboradores dentro de fabricas).
+    let rh = null;
+    try {
+      rh = await lerBalde("rh");
+    } catch (_e) {
+      rh = null;
+    }
+    if (rh !== null && rh !== undefined) {
+      estado.fabricas = injetarRH(estado.fabricas, rh);
+      carregado.rh = true;
+    } else {
+      estado.fabricas = fabricasSemRH(estado.fabricas);
+      carregado.rh = false;
     }
 
     return { value: JSON.stringify(estado) };
@@ -78,10 +129,10 @@ export const supabaseStorage = {
     const estado = JSON.parse(value);
     const principal = { ...estado };
 
-    // Grava cada balde sensível SÓ se ele foi carregado nesta sessão.
+    // Baldes de chave simples (financeiro): grava só se carregado; senão deixa
+    // a chave no principal (comportamento antigo) para não perder dado.
     for (const [chave, id] of Object.entries(BALDES)) {
       if (carregado[id]) {
-        // O balde é a fonte da verdade -> tira a chave do principal.
         delete principal[chave];
         const dados = estado[chave] ?? [];
         const { error } = await supabase
@@ -90,8 +141,26 @@ export const supabaseStorage = {
           .eq("id", id);
         if (error) throw error;
       }
-      // Se NÃO foi carregado, deixamos a chave no principal como estava
-      // (comportamento antigo) para não perder dado durante a transição.
+    }
+
+    // Balde 'rh': só vira fonte da verdade se foi carregado. Aí as listas de
+    // colaboradores saem do principal e vão para o balde. Se NÃO foi carregado
+    // (pré-migração, ou sem acesso), deixamos fabricas como estão para não
+    // perder dado — comportamento antigo.
+    if (Array.isArray(estado.fabricas) && carregado.rh) {
+      principal.fabricas = fabricasParaPrincipal(estado.fabricas);
+      const rh = {};
+      for (const f of estado.fabricas) {
+        rh[f.id] = {
+          colaboradores: f.colaboradores || [],
+          montagem: (f.montagem && f.montagem.colaboradores) || [],
+        };
+      }
+      const { error } = await supabase
+        .from("app_estado")
+        .update({ dados: rh })
+        .eq("id", "rh");
+      if (error) throw error;
     }
 
     const { error } = await supabase
