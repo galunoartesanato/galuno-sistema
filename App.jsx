@@ -351,6 +351,29 @@ function taxasDoPreco(mp, precoUnit, pesoKg) {
   return 0;
 }
 
+// Fator de desconto do pedido (vendas do Tiny). O Tiny manda os itens com o preço
+// CHEIO (de tabela) e o desconto (cupom do vendedor etc.) vem no nível do pedido:
+// valor_total = produtos + frete − desconto. Este fator transforma o preço de
+// tabela no preço realmente pago, rateando o desconto proporcionalmente entre os
+// itens — assim receita, imposto, comissão e margem por item ficam reais.
+function fatorDesconto(v) {
+  const p = v.payload_raw || {};
+  const totalItens = (v.itens || []).reduce(
+    (s, it) => s + num(it.valor_unitario) * num(it.quantidade), 0);
+  if (totalItens <= 0) return 1;
+  // tenta os campos de desconto do payload (Tiny v2/v3); "10%" vira valor sobre os itens
+  const rawDesc = p.valor_desconto ?? p.valorDesconto ?? p.desconto;
+  let desc = String(rawDesc ?? "").trim().endsWith("%")
+    ? totalItens * (num(rawDesc) / 100)
+    : num(rawDesc);
+  // fallback: deduz o desconto do próprio valor_total (= produtos + frete − desconto)
+  if (!desc && num(v.valor_total) > 0) {
+    const frete = num(p.valor_frete ?? p.valorFrete ?? p.frete);
+    desc = Math.max(0, totalItens + frete - num(v.valor_total));
+  }
+  return Math.max(0, totalItens - desc) / totalItens;
+}
+
 const hojeISO = () => new Date().toISOString().slice(0, 10);
 const addDias = (iso, dias) => {
   const d = new Date(iso + "T12:00:00");
@@ -2341,7 +2364,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
 
   function ehPaga(sit) {
     const t = String(sit || "").toLowerCase();
-    return !(t.includes("aberto") || t.includes("cancel") || t.includes("incomplet") || t.includes("nao entregue") || t.includes("não entregue"));
+    return !(t.includes("aberto") || t.includes("cancel") || t.includes("incomplet") || t.includes("nao entregue") || t.includes("não entregue") || t.includes("devolv"));
   }
   function acharMarketplace(canal) {
     if (!canal) return null;
@@ -2371,10 +2394,11 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
   }
   function calc(v) {
     const mp = acharMarketplace(v.canal);
+    const fator = fatorDesconto(v); // rateia o desconto do pedido entre os itens
     let receita = 0, custo = 0, taxas = 0, imposto = 0, semSku = 0;
     for (const it of v.itens || []) {
       const q = num(it.quantidade) || 0;
-      const pu = num(it.valor_unitario) || 0;
+      const pu = (num(it.valor_unitario) || 0) * fator; // preço realmente pago
       receita += pu * q;
       const prod = casarSku(it.sku, produtos);
       if (prod) {
@@ -2389,7 +2413,8 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
     const lucro = receita - custo - taxas - imposto;
     // Faturamento = total do pedido COM frete, já descontados só os descontos.
     // É o valor_total do Tiny (= produtos + frete - desconto).
-    // receita/custo/lucro/margem continuam por item (base de custo); faturamento é a linha de topo.
+    // receita/custo/lucro/margem são por item, com o desconto do pedido rateado
+    // proporcionalmente (fatorDesconto); faturamento é a linha de topo.
     const faturamento = num(v.valor_total);
     return { receita, faturamento, custo, taxas, imposto, lucro, margem: receita ? (lucro / receita) * 100 : 0, mp, semSku };
   }
@@ -2455,9 +2480,10 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
     const m = {};
     for (const { v, c } of linhas) {
       const mp = c.mp;
+      const fator = fatorDesconto(v); // mesmo rateio de desconto usado em calc()
       for (const it of v.itens || []) {
         const q = num(it.quantidade) || 0;
-        const pu = num(it.valor_unitario) || 0;
+        const pu = (num(it.valor_unitario) || 0) * fator; // preço realmente pago
         const prod = casarSku(it.sku, produtos);
         const receita = pu * q;
         let custo = 0, imposto = 0, taxas = 0;
