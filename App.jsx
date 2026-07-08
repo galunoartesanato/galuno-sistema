@@ -2314,6 +2314,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
   const [erro, setErro] = useState("");
   const [aoVivo, setAoVivo] = useState(false);
   const [filtro, setFiltro] = useState("pagos");
+  const [ignorarGratis, setIgnorarGratis] = useState(true); // pedidos R$0 (brindes/afiliados TikTok) fora por padrão
   const [empresa, setEmpresa] = useState("todas");
   const [canalF, setCanalF] = useState("todos");
   const [busca, setBusca] = useState("");
@@ -2436,6 +2437,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
   }
   // linhasBase = passa em todos os filtros MENOS o de situação (usado nos gráficos por situação)
   const linhasBase = enriquecidas.filter(({ v, emp, grupo }) => {
+    if (ignorarGratis && num(v.valor_total) <= 0) return false; // brindes p/ afiliados (TikTok etc.)
     if (empresa !== "todas" && emp !== empresa) return false;
     if (canalF !== "todos" && grupo !== canalF) return false;
     if (dataIni && String(v.data_pedido || "") < dataIni) return false;
@@ -2445,8 +2447,8 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
   });
   const linhas = filtro === "pagos" ? linhasBase.filter(({ v }) => ehPaga(v.situacao)) : linhasBase;
   // volta para a página 1 quando muda filtro/busca/dados
-  useEffect(() => { setPagina(1); }, [empresa, canalF, filtro, busca, dataIni, dataFim, vendas.length]);
-  useEffect(() => { setPagSku(1); }, [empresa, canalF, filtro, busca, dataIni, dataFim, vendas.length, ordSku]);
+  useEffect(() => { setPagina(1); }, [empresa, canalF, filtro, busca, dataIni, dataFim, vendas.length, ignorarGratis]);
+  useEffect(() => { setPagSku(1); }, [empresa, canalF, filtro, busca, dataIni, dataFim, vendas.length, ordSku, ignorarGratis]);
   const totalPaginas = Math.max(1, Math.ceil(linhas.length / POR_PAGINA));
   const paginaAtual = Math.min(pagina, totalPaginas);
   const linhasPagina = linhas.slice((paginaAtual - 1) * POR_PAGINA, paginaAtual * POR_PAGINA);
@@ -2565,7 +2567,7 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
 
   const card = { background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 12, padding: 16 };
   const ctrl = { borderColor: "#E5E7EB", background: "#FFFFFF" };
-  function limpar() { setEmpresa("todas"); setCanalF("todos"); setBusca(""); setDataIni(""); setDataFim(""); setFiltro("pagos"); }
+  function limpar() { setEmpresa("todas"); setCanalF("todos"); setBusca(""); setDataIni(""); setDataFim(""); setFiltro("pagos"); setIgnorarGratis(true); }
 
   return (
     <div>
@@ -2611,6 +2613,10 @@ function VendasTiny({ produtos, insumos, marketplaces }) {
         </label>
         <label className="text-xs flex-1 min-w-[180px]" style={{ color: "#6B7280" }}>Produto (SKU ou nome)
           <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar..." className="block w-full px-2 py-2 rounded-lg border text-sm" style={ctrl} />
+        </label>
+        <label className="text-xs flex items-center gap-1.5 px-2 py-2 rounded-lg border cursor-pointer select-none" style={{ ...ctrl, color: "#6B7280" }} title="Pedidos com valor total R$ 0,00 (ex.: amostras grátis para afiliados do TikTok Shop) ficam fora das vendas, dos gráficos e do ranking de SKUs.">
+          <input type="checkbox" checked={ignorarGratis} onChange={(e) => setIgnorarGratis(e.target.checked)} />
+          Ignorar pedidos R$ 0,00 (brindes/afiliados)
         </label>
         <button onClick={limpar} className="px-3 py-2 rounded-lg border text-sm" style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>Limpar</button>
       </div>
