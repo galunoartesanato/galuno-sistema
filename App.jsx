@@ -420,14 +420,21 @@ function parseOFX(texto) {
   }
   return { conta: conta || "", saldo: saldo ? valorOFX(saldo) : null, dataSaldo: dataOFX(dtSaldo), transacoes };
 }
-// Extrai "quem recebeu/pagou" (a contraparte) do texto do extrato. Como o parser
-// junta o favorecido (NAME) e o histórico (MEMO) com " — ", o favorecido é o
-// trecho antes do " — ". Funciona também para linhas já importadas antes.
+// Extrai "quem recebeu/pagou" (a contraparte/origem) do texto do extrato.
+//  1) OFX com favorecido no campo NAME: o parser junta NAME e MEMO com " — ",
+//     então o favorecido é o trecho antes do " — ".
+//  2) Santander e afins mandam tudo no histórico, começando pelo tipo da
+//     transação ("Pix Enviado MAXIMA", "Pix Recebido 27415911000136", "Ted ...").
+//     Removemos esse prefixo (e a data no fim) para sobrar só a origem.
+// Funciona também para linhas já importadas antes.
 function quemRecebeu(texto) {
   const t = String(texto || "").trim();
   if (!t) return "";
   if (t.includes(" — ")) return t.split(" — ")[0].trim();
-  return t;
+  const s = t.replace(/\s+\d{2}\/\d{2}\/\d{2,4}\s*$/, "").trim(); // tira data no fim (ex.: tarifas)
+  const m = s.match(/^(?:pix|ted|doc|tev|transfer[êe]ncia|transf)\s+(?:enviad[oa]|recebid[oa]|env|receb)?\s*(.+)$/i);
+  if (m && m[1] && m[1].trim()) return m[1].trim();
+  return s;
 }
 function splitCSVLinha(linha, sep) {
   const out = []; let cur = "", dentro = false;
