@@ -2022,6 +2022,7 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
   const [msg, setMsg] = useState("");
   const [soPendentes, setSoPendentes] = useState(false);
   const [contaFiltro, setContaFiltro] = useState("todas");
+  const [confirmarLimpar, setConfirmarLimpar] = useState(false);
   const [mesDre, setMesDre] = useState(hojeISO().slice(0, 7));
   const [incluirLanc, setIncluirLanc] = useState(true);
   const [colsDre, setColsDre] = useState({ banco: true, conta: true, descricao: true, categoria: true, tipo: true, conciliado: true });
@@ -2041,6 +2042,7 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
     setCarregando(false);
   }
   useEffect(() => { carregar(); }, []);
+  useEffect(() => { setConfirmarLimpar(false); }, [contaFiltro, sub]);
 
   async function importarArquivos(fileList) {
     if (!fileList || !fileList.length) return;
@@ -2094,6 +2096,22 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
     setExtrato((arr) => arr.filter((l) => l.id !== id));
     const { error } = await supabase.from("extrato_bancario").delete().eq("id", id);
     if (error) { setErro("Erro ao excluir: " + error.message); await carregar(); }
+  }
+  async function limparExtrato() {
+    setImportando(true); setErro(""); setMsg("");
+    try {
+      let q = supabase.from("extrato_bancario").delete();
+      if (contaFiltro === "todas") q = q.neq("id", ""); // id é PK não-vazia -> apaga tudo
+      else { const [bk, ct] = contaFiltro.split("|"); q = q.eq("banco", bk).eq("conta", ct || ""); }
+      const { error } = await q;
+      if (error) throw error;
+      setConfirmarLimpar(false);
+      await carregar();
+      setMsg("Extrato limpo. Pode importar novamente.");
+    } catch (e) {
+      setErro("Não consegui limpar: " + (e.message || e));
+    }
+    setImportando(false);
   }
 
   const vendasConc = useMemo(() => (vendas || []).map((v) => ({
@@ -2324,6 +2342,27 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
             </table>
           </div>
           <datalist id="cats-dre">{categoriasUsadas.map((c) => <option key={c} value={c} />)}</datalist>
+
+          {extrato.length > 0 && (
+            <div className="rounded-2xl p-4 shadow-sm border" style={{ borderColor: "#F0CFC9", background: "#FEF7F5" }}>
+              <p className="text-sm font-semibold" style={{ color: "#A33B2E" }}>Recomeçar do zero</p>
+              <p className="text-xs mt-1 mb-3" style={{ color: "#6B7280" }}>
+                Apaga {contaFiltro === "todas" ? "TODO o extrato importado" : <>o extrato da conta <strong>{rotuloConta(contaFiltro)}</strong></>} para você importar de novo (útil depois de melhorias no sistema). As categorias e conciliações dessas linhas também são apagadas. <strong>Não</strong> afeta lançamentos manuais nem vendas.
+              </p>
+              {!confirmarLimpar ? (
+                <button onClick={() => setConfirmarLimpar(true)} disabled={importando || !extratoFiltrado.length}
+                  className="px-3 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40" style={{ background: "#A33B2E" }}>
+                  Limpar {contaFiltro === "todas" ? "todo o extrato" : "o extrato desta conta"} ({extratoFiltrado.length} linha{extratoFiltrado.length === 1 ? "" : "s"})
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm" style={{ color: "#A33B2E" }}>Apagar {extratoFiltrado.length} linha(s)? Isso não dá para desfazer.</span>
+                  <button onClick={limparExtrato} disabled={importando} className="px-3 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40" style={{ background: "#A33B2E" }}>Sim, apagar</button>
+                  <button onClick={() => setConfirmarLimpar(false)} className="px-3 py-2 rounded-lg border text-sm" style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>Cancelar</button>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
