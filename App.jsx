@@ -2008,6 +2008,7 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
   const [importando, setImportando] = useState(false);
   const [msg, setMsg] = useState("");
   const [soPendentes, setSoPendentes] = useState(false);
+  const [contaFiltro, setContaFiltro] = useState("todas");
   const [mesDre, setMesDre] = useState(hojeISO().slice(0, 7));
   const [incluirLanc, setIncluirLanc] = useState(true);
   const [colsDre, setColsDre] = useState({ banco: true, conta: true, descricao: true, categoria: true, tipo: true, conciliado: true });
@@ -2091,24 +2092,31 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
     "Receita de vendas", "Outras receitas", "CMV (custo das mercadorias)", "Despesa operacional", "Impostos e taxas", "Pró-labore / salários", "Tarifas bancárias",
   ])), [extrato, financeiro]);
 
-  // saldo diário por conta
-  const inicialSaldo = useMemo(() => ancoraSaldo(extrato), [extrato]);
-  const serieSaldo = useMemo(() => saldoDiario(extrato, inicialSaldo), [extrato, inicialSaldo]);
+  // filtro de conta (aplica ao saldo, à conciliação e ao DRE)
+  const contaKey = (l) => `${l.banco}|${l.conta || ""}`;
+  const rotuloConta = (k) => { const [b, c] = k.split("|"); return b + (c ? " · " + c : ""); };
+  const contasDisponiveis = useMemo(() => Array.from(new Set(extrato.map(contaKey))).sort(), [extrato]);
+  const extratoFiltrado = useMemo(() => (contaFiltro === "todas" ? extrato : extrato.filter((l) => contaKey(l) === contaFiltro)), [extrato, contaFiltro]);
+
+  // saldo diário por conta (respeita o filtro)
+  const inicialSaldo = useMemo(() => ancoraSaldo(extratoFiltrado), [extratoFiltrado]);
+  const serieSaldo = useMemo(() => saldoDiario(extratoFiltrado, inicialSaldo), [extratoFiltrado, inicialSaldo]);
   const contas = Object.keys(serieSaldo);
   const saldoConsolidado = contas.reduce((s, k) => { const arr = serieSaldo[k]; return s + (arr.length ? arr[arr.length - 1].saldo : 0); }, 0);
 
-  const pendentes = extrato.filter((l) => !l.conciliado).length;
-  const extratoView = soPendentes ? extrato.filter((l) => !l.conciliado) : extrato;
+  const pendentes = extratoFiltrado.filter((l) => !l.conciliado).length;
+  const extratoView = soPendentes ? extratoFiltrado.filter((l) => !l.conciliado) : extratoFiltrado;
 
-  // movimentos para o DRE: extrato categorizado + lançamentos não vinculados (opcional)
+  // movimentos para o DRE: extrato categorizado (da conta filtrada) + lançamentos não vinculados (opcional)
   const movimentosDre = useMemo(() => {
-    const vinculadosLanc = new Set(extrato.filter((l) => l.vinculo_tipo === "lancamento" && l.vinculo_id).map((l) => l.vinculo_id));
-    const doExtrato = extrato.map((l) => ({ data: l.data, valor: num(l.valor), categoria: l.categoria }));
-    if (!incluirLanc) return doExtrato;
+    const vinculadosLanc = new Set(extratoFiltrado.filter((l) => l.vinculo_tipo === "lancamento" && l.vinculo_id).map((l) => l.vinculo_id));
+    const doExtrato = extratoFiltrado.map((l) => ({ data: l.data, valor: num(l.valor), categoria: l.categoria }));
+    // lançamentos manuais só entram quando NÃO há filtro de conta (não pertencem a uma conta específica)
+    if (!incluirLanc || contaFiltro !== "todas") return doExtrato;
     const doLanc = (financeiro || []).filter((l) => !vinculadosLanc.has(l.id))
       .map((l) => ({ data: l.data, valor: l.tipo === "entrada" ? num(l.valor) : -num(l.valor), categoria: l.categoria }));
     return [...doExtrato, ...doLanc];
-  }, [extrato, financeiro, incluirLanc]);
+  }, [extratoFiltrado, financeiro, incluirLanc, contaFiltro]);
   const dre = useMemo(() => agregarDRE(movimentosDre, mesDre), [movimentosDre, mesDre]);
 
   async function baixarDreExcel() {
@@ -2137,7 +2145,8 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumo), "Resumo DRE");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalhe), "Detalhe");
-    XLSX.writeFile(wb, `dre-${mesDre}.xlsx`);
+    const sufConta = contaFiltro === "todas" ? "" : "_" + rotuloConta(contaFiltro).replace(/[^\w]+/g, "-");
+    XLSX.writeFile(wb, `dre-${mesDre}${sufConta}.xlsx`);
   }
 
   // ---- Resumo (visão original, preservada) ----
@@ -2228,11 +2237,23 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
             {msg && <p className="text-sm mt-3" style={{ color: "#16A34A" }}>{msg}</p>}
           </div>
 
+          {contasDisponiveis.length > 0 && (
+            <div className="flex items-end gap-3 flex-wrap">
+              <Field label="Analisar conta">
+                <select className={inputCls} style={inputStyle} value={contaFiltro} onChange={(e) => setContaFiltro(e.target.value)}>
+                  <option value="todas">Todas as contas ({contasDisponiveis.length})</option>
+                  {contasDisponiveis.map((k) => <option key={k} value={k}>{rotuloConta(k)}</option>)}
+                </select>
+              </Field>
+              {contaFiltro !== "todas" && <button onClick={() => setContaFiltro("todas")} className="px-3 py-2 rounded-lg border text-sm" style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>Ver todas</button>}
+            </div>
+          )}
+
           {contas.length > 0 && (
             <div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="rounded-2xl p-4 shadow-sm" style={{ background: "#1F2937" }}>
-                  <p className="text-xs" style={{ color: "#9CA3AF" }}>Saldo consolidado (todas as contas)</p>
+                  <p className="text-xs" style={{ color: "#9CA3AF" }}>{contaFiltro === "todas" ? "Saldo consolidado (todas as contas)" : "Saldo da conta"}</p>
                   <p className="text-2xl font-bold" style={{ color: "#F0C05A" }}>{BRL(saldoConsolidado)}</p>
                 </div>
                 {contas.map((k) => {
@@ -2298,8 +2319,14 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
           <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
             <div className="flex flex-wrap gap-3 items-end">
               <Field label="Mês de referência"><input type="month" className={inputCls} style={inputStyle} value={mesDre} onChange={(e) => setMesDre(e.target.value)} /></Field>
-              <label className="text-xs flex items-center gap-1.5 cursor-pointer select-none px-2 py-2 rounded-lg border" style={{ ...inputStyle, color: "#6B7280" }}>
-                <input type="checkbox" checked={incluirLanc} onChange={(e) => setIncluirLanc(e.target.checked)} /> incluir lançamentos manuais não conciliados
+              <Field label="Conta">
+                <select className={inputCls} style={inputStyle} value={contaFiltro} onChange={(e) => setContaFiltro(e.target.value)}>
+                  <option value="todas">Todas as contas</option>
+                  {contasDisponiveis.map((k) => <option key={k} value={k}>{rotuloConta(k)}</option>)}
+                </select>
+              </Field>
+              <label className="text-xs flex items-center gap-1.5 cursor-pointer select-none px-2 py-2 rounded-lg border" style={{ ...inputStyle, color: contaFiltro === "todas" ? "#6B7280" : "#B0B0B0" }} title={contaFiltro !== "todas" ? "Disponível apenas com todas as contas (lançamentos não pertencem a uma conta específica)" : ""}>
+                <input type="checkbox" checked={incluirLanc && contaFiltro === "todas"} disabled={contaFiltro !== "todas"} onChange={(e) => setIncluirLanc(e.target.checked)} /> incluir lançamentos manuais não conciliados
               </label>
               <button onClick={baixarDreExcel} disabled={!dre.qtd} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40" style={{ background: "#16A34A" }}>Baixar Excel (DRE)</button>
             </div>
