@@ -3754,6 +3754,8 @@ function Usuarios() {
   const [email, setEmail] = useState("");
   const [setor, setSetor] = useState("vendas");
   const [erro, setErro] = useState("");
+  const [aba, setAba] = useState("equipe");
+  const [aprovSetor, setAprovSetor] = useState({}); // email -> setor escolhido na aprovação
 
   const SETORES = [
     ["dono", "Dono (tudo + gerenciar usuários)"],
@@ -3763,9 +3765,10 @@ function Usuarios() {
     ["restrito", "Restrito (sem acesso)"],
   ];
   const nomeSetor = (s) => (SETORES.find((x) => x[0] === s) || [s, s])[1];
+  const ehPendente = (u) => { const s = String(u.setor || "").trim(); return !s || s === "restrito"; };
 
   async function carregar() {
-    const { data, error } = await supabase.from("perfis").select("*").order("email");
+    const { data, error } = await supabase.from("perfis").select("*").order("criado_em", { ascending: false });
     if (error) setErro(error.message); else { setLista(data || []); setErro(""); }
   }
   useEffect(() => { carregar(); }, []);
@@ -3783,53 +3786,112 @@ function Usuarios() {
   const card = { background: "#FFFFFF", border: "1px solid #E5E7EB", borderRadius: 12, padding: 16 };
   const ctrl = { borderColor: "#E5E7EB", background: "#FFFFFF" };
 
+  const equipe = lista.filter((u) => !ehPendente(u));
+  const pendentes = lista.filter(ehPendente);
+  const diasDe = (iso) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86400000) : null);
+  const fmtExpira = (iso) => {
+    const d = diasDe(iso); if (d == null) return "—";
+    const rest = 3 - d;
+    if (rest <= 0) return "expira hoje";
+    return `expira em ${rest} dia${rest === 1 ? "" : "s"}`;
+  };
+
   return (
     <div className="space-y-5">
       <div className="rounded-xl px-4 py-3 text-sm" style={{ background: "#F8FAFC", border: "1px solid #E2E8F0", color: "#475569" }}>
-        Defina o setor de cada pessoa. O login em si é criado no Supabase (Authentication); aqui você só liga o <strong>e-mail</strong> ao <strong>setor</strong>, que controla quais abas a pessoa vê. (Trava de interface — organiza acessos do dia a dia.)
+        Quem se cadastra pelo login entra como <strong>restrito</strong> (sem ver nada) e aparece em <strong>Aguardando aprovação</strong>. Aprovar = escolher o setor da pessoa. Cadastros não aprovados são apagados após <strong>3 dias</strong>.
       </div>
 
-      <div style={card}>
-        <p className="text-sm font-semibold mb-3">Adicionar / atualizar acesso</p>
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="text-xs flex-1 min-w-[220px]" style={{ color: "#6B7280" }}>E-mail da pessoa
-            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="pessoa@email.com" className="block w-full px-2 py-2 rounded-lg border text-sm" style={ctrl} />
-          </label>
-          <label className="text-xs" style={{ color: "#6B7280" }}>Setor
-            <select value={setor} onChange={(e) => setSetor(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
-              {SETORES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </label>
-          <button onClick={salvar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1F2937", color: "#F4F5F7" }}>Salvar</button>
-        </div>
-        {erro && <p className="text-sm mt-2" style={{ color: "#DC2626" }}>Erro: {erro}</p>}
+      <div className="flex gap-2">
+        {[["equipe", `Equipe (${equipe.length})`], ["pendentes", `Aguardando aprovação${pendentes.length ? " (" + pendentes.length + ")" : ""}`]].map(([k, rot]) => (
+          <button key={k} onClick={() => setAba(k)} className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={aba === k ? { background: "#1F2937", color: "#F4F5F7" } : { background: "#F1F5F9", color: "#475569" }}>
+            {rot}
+          </button>
+        ))}
       </div>
+      {erro && <p className="text-sm" style={{ color: "#DC2626" }}>Erro: {erro}</p>}
 
-      <div className="overflow-x-auto" style={card}>
-        <table className="w-full text-sm">
-          <thead>
-            <tr style={{ color: "#9CA3AF", textAlign: "left" }}>
-              <th className="py-2 pr-3">E-mail</th><th className="py-2 pr-3">Setor</th><th className="py-2 pr-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {lista.map((u) => (
-              <tr key={u.email} style={{ borderTop: "1px solid #EEF0F2" }}>
-                <td className="py-2 pr-3">{u.email}</td>
-                <td className="py-2 pr-3">
-                  <select value={u.setor} onChange={(e) => alterar(u.email, e.target.value)} className="px-2 py-1 rounded border text-sm" style={ctrl} title={nomeSetor(u.setor)}>
-                    {SETORES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
-                </td>
-                <td className="py-2 pr-3 text-right">
-                  <button onClick={() => remover(u.email)} className="text-lg" style={{ color: "#A33B2E" }} title="Remover">×</button>
-                </td>
+      {aba === "equipe" ? (
+        <>
+          <div style={card}>
+            <p className="text-sm font-semibold mb-3">Adicionar / atualizar acesso manualmente</p>
+            <div className="flex flex-wrap items-end gap-2">
+              <label className="text-xs flex-1 min-w-[220px]" style={{ color: "#6B7280" }}>E-mail da pessoa
+                <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="pessoa@email.com" className="block w-full px-2 py-2 rounded-lg border text-sm" style={ctrl} />
+              </label>
+              <label className="text-xs" style={{ color: "#6B7280" }}>Setor
+                <select value={setor} onChange={(e) => setSetor(e.target.value)} className="block px-2 py-2 rounded-lg border text-sm" style={ctrl}>
+                  {SETORES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </label>
+              <button onClick={salvar} className="px-3 py-2 rounded-lg text-sm" style={{ background: "#1F2937", color: "#F4F5F7" }}>Salvar</button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto" style={card}>
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ color: "#9CA3AF", textAlign: "left" }}>
+                  <th className="py-2 pr-3">Nome</th><th className="py-2 pr-3">E-mail</th><th className="py-2 pr-3">Setor</th><th className="py-2 pr-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {equipe.map((u) => (
+                  <tr key={u.email} style={{ borderTop: "1px solid #EEF0F2" }}>
+                    <td className="py-2 pr-3">{u.nome || "—"}{u.cargo ? <span className="block text-xs" style={{ color: "#9CA3AF" }}>{u.cargo}</span> : null}</td>
+                    <td className="py-2 pr-3">{u.email}</td>
+                    <td className="py-2 pr-3">
+                      <select value={u.setor} onChange={(e) => alterar(u.email, e.target.value)} className="px-2 py-1 rounded border text-sm" style={ctrl} title={nomeSetor(u.setor)}>
+                        {SETORES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                    </td>
+                    <td className="py-2 pr-3 text-right">
+                      <button onClick={() => remover(u.email)} className="text-lg" style={{ color: "#A33B2E" }} title="Remover">×</button>
+                    </td>
+                  </tr>
+                ))}
+                {!equipe.length && <tr><td colSpan={4} className="py-3" style={{ color: "#6B7280" }}>Nenhum acesso definido ainda.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        <div className="overflow-x-auto" style={card}>
+          <table className="w-full text-sm">
+            <thead>
+              <tr style={{ color: "#9CA3AF", textAlign: "left" }}>
+                <th className="py-2 pr-3">Nome / cargo</th><th className="py-2 pr-3">E-mail</th><th className="py-2 pr-3">Cadastro</th><th className="py-2 pr-3">Aprovar como</th><th className="py-2 pr-3"></th>
               </tr>
-            ))}
-            {!lista.length && <tr><td colSpan={3} className="py-3" style={{ color: "#6B7280" }}>Nenhum acesso definido ainda.</td></tr>}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {pendentes.map((u) => {
+                const escolhido = aprovSetor[u.email] || "vendas";
+                return (
+                  <tr key={u.email} style={{ borderTop: "1px solid #EEF0F2" }}>
+                    <td className="py-2 pr-3">{u.nome || "—"}{u.cargo ? <span className="block text-xs" style={{ color: "#9CA3AF" }}>{u.cargo}</span> : null}</td>
+                    <td className="py-2 pr-3">{u.email}</td>
+                    <td className="py-2 pr-3 whitespace-nowrap">
+                      {u.criado_em ? fmtData(String(u.criado_em).slice(0, 10)) : "—"}
+                      <span className="block text-xs" style={{ color: "#B45309" }}>{fmtExpira(u.criado_em)}</span>
+                    </td>
+                    <td className="py-2 pr-3">
+                      <select value={escolhido} onChange={(e) => setAprovSetor((m) => ({ ...m, [u.email]: e.target.value }))} className="px-2 py-1 rounded border text-sm" style={ctrl}>
+                        {SETORES.filter(([v]) => v !== "restrito").map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                      </select>
+                    </td>
+                    <td className="py-2 pr-3 text-right whitespace-nowrap">
+                      <button onClick={() => alterar(u.email, escolhido)} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-white" style={{ background: "#16A34A" }}>Aprovar</button>
+                      <button onClick={() => remover(u.email)} className="ml-2 text-lg align-middle" style={{ color: "#A33B2E" }} title="Recusar (some da lista; a conta é apagada na limpeza de 3 dias)">×</button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {!pendentes.length && <tr><td colSpan={5} className="py-8 text-center" style={{ color: "#6B7280" }}>Ninguém aguardando aprovação. 🎉</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
