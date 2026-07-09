@@ -374,6 +374,161 @@ function fatorDesconto(v) {
   return Math.max(0, totalItens - desc) / totalItens;
 }
 
+// ===================== EXTRATO BANCÁRIO (Financeiro Fase 1) =====================
+// Parser de OFX/CSV, id estável para dedup, saldo diário, conciliação e DRE.
+function hashCurto(s) {
+  let h = 0; const str = String(s || "");
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+function dataOFX(s) {
+  const m = String(s || "").match(/(\d{4})(\d{2})(\d{2})/);
+  return m ? `${m[1]}-${m[2]}-${m[3]}` : "";
+}
+function valorOFX(s) {
+  let t = String(s || "").trim();
+  if (t.includes(",")) t = t.replace(/\./g, "").replace(",", ".");
+  const n = parseFloat(t);
+  return isNaN(n) ? 0 : n;
+}
+function tagOFX(bloco, nome) {
+  const m = bloco.match(new RegExp(`<${nome}>\\s*([^<\\r\\n]*)`, "i"));
+  return m ? m[1].trim() : "";
+}
+function parseOFX(texto) {
+  const t = String(texto || "");
+  const conta = tagOFX(t, "ACCTID");
+  const saldo = tagOFX(t, "BALAMT");
+  const dtSaldo = tagOFX(t, "DTASOF");
+  const transacoes = [];
+  const blocos = t.match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/gi)
+    || t.match(/<STMTTRN>[\s\S]*?(?=<STMTTRN>|<\/BANKTRANLIST>)/gi) || [];
+  for (const b of blocos) {
+    const data = dataOFX(tagOFX(b, "DTPOSTED"));
+    const valor = valorOFX(tagOFX(b, "TRNAMT"));
+    const fitid = tagOFX(b, "FITID");
+    const memo = tagOFX(b, "MEMO");
+    const nome = tagOFX(b, "NAME");
+    const trntype = tagOFX(b, "TRNTYPE");
+    const descricao = [nome, memo].filter(Boolean).join(" — ") || trntype || "";
+    if (!data && !valor) continue;
+    transacoes.push({ data, valor, fitid, descricao, tipo: valor >= 0 ? "credito" : "debito" });
+  }
+  return { conta: conta || "", saldo: saldo ? valorOFX(saldo) : null, dataSaldo: dataOFX(dtSaldo), transacoes };
+}
+function splitCSVLinha(linha, sep) {
+  const out = []; let cur = "", dentro = false;
+  for (let i = 0; i < linha.length; i++) {
+    const c = linha[i];
+    if (c === '"') { if (dentro && linha[i + 1] === '"') { cur += '"'; i++; } else dentro = !dentro; }
+    else if (c === sep && !dentro) { out.push(cur); cur = ""; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out.map((x) => x.trim());
+}
+function normalizaDataBR(s) {
+  const t = String(s || "").trim();
+  let m = t.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = t.match(/^(\d{2})\/(\d{2})\/(\d{2,4})/);
+  if (m) { const ano = m[3].length === 2 ? "20" + m[3] : m[3]; return `${ano}-${m[2]}-${m[1]}`; }
+  return "";
+}
+function parseCSVExtrato(texto) {
+  const linhas = String(texto || "").split(/\r?\n/).filter((l) => l.trim());
+  if (!linhas.length) return { transacoes: [] };
+  const sep = (linhas[0].match(/;/g) || []).length >= (linhas[0].match(/,/g) || []).length ? ";" : ",";
+  let hIdx = 0;
+  for (let i = 0; i < Math.min(linhas.length, 15); i++) {
+    const low = linhas[i].toLowerCase();
+    if (low.includes("data") && (low.includes("valor") || low.includes("crédito") || low.includes("credito") || low.includes("débito") || low.includes("debito") || low.includes("hist"))) { hIdx = i; break; }
+  }
+  const header = splitCSVLinha(linhas[hIdx], sep).map((h) => h.toLowerCase());
+  const acha = (...alts) => header.findIndex((h) => alts.some((a) => h.includes(a)));
+  const iData = acha("data"), iValor = acha("valor", "amount");
+  const iCred = acha("crédito", "credito", "entrada"), iDeb = acha("débito", "debito", "saída", "saida");
+  const iDesc = acha("histór", "histor", "descri", "lançamento", "lancamento", "memo"), iDoc = acha("documento", "docto", "id");
+  const transacoes = [];
+  for (let i = hIdx + 1; i < linhas.length; i++) {
+    const c = splitCSVLinha(linhas[i], sep);
+    if (!c.length || !c[iData]) continue;
+    const data = normalizaDataBR(c[iData]);
+    if (!data) continue;
+    let valor = 0;
+    if (iValor >= 0 && c[iValor] !== undefined && c[iValor] !== "") valor = valorOFX(c[iValor]);
+    else { const cr = iCred >= 0 ? valorOFX(c[iCred]) : 0; const db = iDeb >= 0 ? valorOFX(c[iDeb]) : 0; valor = (cr || 0) - Math.abs(db || 0); }
+    if (!valor) continue;
+    transacoes.push({ data, valor, fitid: iDoc >= 0 ? (c[iDoc] || "") : "", descricao: iDesc >= 0 ? (c[iDesc] || "") : "", tipo: valor >= 0 ? "credito" : "debito" });
+  }
+  return { transacoes };
+}
+function linhaId(banco, conta, t) {
+  const base = t.fitid
+    ? `${banco}:${conta}:${t.fitid}`
+    : `${banco}:${conta}:${t.data}:${t.valor}:${hashCurto(t.descricao)}`;
+  return base.replace(/\s+/g, "_");
+}
+function ancoraSaldo(linhas) {
+  const porConta = {};
+  for (const l of linhas) { const k = `${l.banco}|${l.conta || ""}`; (porConta[k] = porConta[k] || []).push(l); }
+  const inicial = {};
+  for (const [k, arr] of Object.entries(porConta)) {
+    const comSaldo = arr.filter((l) => l.saldo != null && l.saldo !== "");
+    if (!comSaldo.length) continue;
+    comSaldo.sort((a, b) => String(a.data).localeCompare(String(b.data)));
+    const ancora = comSaldo[comSaldo.length - 1];
+    const somaAte = arr.filter((l) => String(l.data) <= String(ancora.data)).reduce((s, l) => s + num(l.valor), 0);
+    inicial[k] = num(ancora.saldo) - somaAte;
+  }
+  return inicial;
+}
+function saldoDiario(linhas, contasSaldoInicial = {}) {
+  const porConta = {};
+  for (const l of linhas) { const k = `${l.banco}|${l.conta || ""}`; (porConta[k] = porConta[k] || []).push(l); }
+  const resultado = {};
+  for (const [k, arr] of Object.entries(porConta)) {
+    arr.sort((a, b) => String(a.data).localeCompare(String(b.data)));
+    let saldo = num(contasSaldoInicial[k]);
+    const porDia = {};
+    for (const l of arr) { saldo += num(l.valor); porDia[l.data] = { data: l.data, movimento: (porDia[l.data]?.movimento || 0) + num(l.valor), saldo }; }
+    resultado[k] = Object.values(porDia).sort((a, b) => String(a.data).localeCompare(String(b.data)));
+  }
+  return resultado;
+}
+function sugerirConciliacao(linha, lancamentos, vendas, janelaDias = 4) {
+  const alvo = Math.abs(num(linha.valor));
+  const ehEntrada = num(linha.valor) >= 0;
+  const dias = (a, b) => Math.abs((new Date(a + "T12:00:00") - new Date(b + "T12:00:00")) / 86400000);
+  const perto = (d) => d && dias(linha.data, d) <= janelaDias;
+  for (const l of lancamentos || []) {
+    const mesmoSentido = ehEntrada ? l.tipo === "entrada" : l.tipo === "saida";
+    if (mesmoSentido && Math.abs(num(l.valor) - alvo) < 0.01 && perto(l.data))
+      return { tipo: "lancamento", id: l.id, rotulo: l.descricao || "Lançamento", valor: num(l.valor) };
+  }
+  if (ehEntrada) {
+    for (const v of vendas || []) {
+      const liq = v.__liquido != null ? num(v.__liquido) : num(v.liquido);
+      if (Math.abs(liq - alvo) < 0.01 && perto(v.recebimento))
+        return { tipo: "venda", id: v.id, rotulo: `Venda ${v.sku || v.chave || v.id}`, valor: liq };
+    }
+  }
+  return null;
+}
+function agregarDRE(movimentos, mes) {
+  const doMes = (movimentos || []).filter((m) => String(m.data || "").slice(0, 7) === mes);
+  const cats = {};
+  for (const m of doMes) {
+    const cat = (m.categoria || "").trim() || "(sem categoria)";
+    const c = cats[cat] = cats[cat] || { categoria: cat, entradas: 0, saidas: 0 };
+    if (num(m.valor) >= 0) c.entradas += num(m.valor); else c.saidas += Math.abs(num(m.valor));
+  }
+  const linhas = Object.values(cats).map((c) => ({ ...c, saldo: c.entradas - c.saidas }))
+    .sort((a, b) => (b.entradas + b.saidas) - (a.entradas + a.saidas));
+  const tot = linhas.reduce((s, c) => ({ entradas: s.entradas + c.entradas, saidas: s.saidas + c.saidas, saldo: s.saldo + c.saldo }), { entradas: 0, saidas: 0, saldo: 0 });
+  return { linhas, total: tot, qtd: doMes.length };
+}
+
 const hojeISO = () => new Date().toISOString().slice(0, 10);
 const addDias = (iso, dias) => {
   const d = new Date(iso + "T12:00:00");
@@ -1174,67 +1329,9 @@ export default function App() {
         {tab === "clientes" && <Clientes />}
 
         {/* ============ FINANCEIRO ============ */}
-        {tab === "financeiro" && (() => {
-          const hoje = hojeISO();
-          const mes = hoje.slice(0, 7);
-          const soma = (arr, f) => arr.reduce((s, x) => s + f(x), 0);
-          const entradasMes = soma(financeiro.filter((l) => l.tipo === "entrada" && (l.data || "").slice(0, 7) === mes), (l) => num(l.valor));
-          const saidasMes = soma(financeiro.filter((l) => l.tipo === "saida" && (l.data || "").slice(0, 7) === mes), (l) => num(l.valor));
-          const recebidoVendasMes = soma(vendas.filter((v) => v.recebimento <= hoje && (v.recebimento || "").slice(0, 7) === mes), (v) => lucroVenda(v).liquido);
-          const aReceber = soma(vendas.filter((v) => v.recebimento > hoje), (v) => lucroVenda(v).liquido);
-          const saldoGeral = soma(financeiro.filter((l) => l.tipo === "entrada"), (l) => num(l.valor))
-            - soma(financeiro.filter((l) => l.tipo === "saida"), (l) => num(l.valor))
-            + soma(vendas.filter((v) => v.recebimento <= hoje), (v) => lucroVenda(v).liquido);
-          return (
-            <div className="space-y-5">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[["Entradas do mês (manuais)", entradasMes, "#1F2937"], ["Vendas recebidas no mês", recebidoVendasMes, "#1F2937"], ["Saídas do mês", saidasMes, "#A33B2E"], ["A receber de vendas", aReceber, "#92400E"]].map(([l, v, c]) => (
-                  <div key={l} className="bg-white rounded-2xl p-4 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
-                    <p className="text-xs" style={{ color: "#6B7280" }}>{l}</p>
-                    <p className="text-xl font-bold" style={{ color: c }}>{BRL(v)}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="rounded-2xl p-4 shadow-sm" style={{ background: "#1F2937" }}>
-                <p className="text-xs" style={{ color: "#9CA3AF" }}>Saldo geral (entradas manuais + vendas recebidas − saídas)</p>
-                <p className="text-2xl font-bold" style={{ color: "#F0C05A" }}>{BRL(saldoGeral)}</p>
-              </div>
-
-              <LancamentoForm onSave={addLancamento} />
-
-              <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E5E7EB" }}>
-                <table className="w-full text-sm min-w-[560px]">
-                  <thead>
-                    <tr style={{ background: "#EEF2F7", color: "#374151" }}>
-                      {["Data", "Descrição", "Categoria", "Tipo", "Valor", ""].map((h) => (
-                        <th key={h} className="text-left px-3 py-3 font-semibold">{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {financeiro.slice(0, 100).map((l) => (
-                      <tr key={l.id} className="border-t" style={{ borderColor: "#EFE9DC" }}>
-                        <td className="px-3 py-2 whitespace-nowrap">{fmtData(l.data)}</td>
-                        <td className="px-3 py-2">{l.descricao}</td>
-                        <td className="px-3 py-2" style={{ color: "#6B7280" }}>{l.categoria || "—"}</td>
-                        <td className="px-3 py-2">
-                          <span className="text-xs px-2 py-0.5 rounded-full" style={l.tipo === "entrada" ? { background: "#EEF2F7", color: "#374151" } : { background: "#FBE7E3", color: "#A33B2E" }}>
-                            {l.tipo === "entrada" ? "Entrada" : "Saída"}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 font-semibold" style={{ color: l.tipo === "entrada" ? "#1F2937" : "#A33B2E" }}>{l.tipo === "saida" ? "− " : "+ "}{BRL(num(l.valor))}</td>
-                        <td className="px-3 py-2"><button className="text-lg" style={{ color: "#A33B2E" }} aria-label="Excluir lançamento" onClick={() => delLancamento(l.id)}>×</button></td>
-                      </tr>
-                    ))}
-                    {!financeiro.length && (
-                      <tr><td colSpan={6} className="px-4 py-8 text-center" style={{ color: "#6B7280" }}>Nenhum lançamento. Registre entradas e saídas acima — as vendas dos marketplaces entram automaticamente quando o recebimento vence.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          );
-        })()}
+        {tab === "financeiro" && (
+          <FinanceiroPanel financeiro={financeiro} vendas={vendas} addLancamento={addLancamento} delLancamento={delLancamento} />
+        )}
 
         {/* ============ ESTOQUE ============ */}
         {tab === "estoque" && (() => {
@@ -1900,7 +1997,358 @@ function VendaForm({ produtos, marketplaces, insumos, onSave }) {
   );
 }
 
-function LancamentoForm({ onSave }) {
+// ============ FINANCEIRO (Resumo + Extrato & Conciliação + Relatório DRE) ============
+function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
+  const [sub, setSub] = useState("resumo");
+  const [extrato, setExtrato] = useState([]);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState("");
+  const [banco, setBanco] = useState("Santander");
+  const [contaManual, setContaManual] = useState("");
+  const [importando, setImportando] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [soPendentes, setSoPendentes] = useState(false);
+  const [mesDre, setMesDre] = useState(hojeISO().slice(0, 7));
+  const [incluirLanc, setIncluirLanc] = useState(true);
+  const [colsDre, setColsDre] = useState({ banco: true, conta: true, descricao: true, categoria: true, tipo: true, conciliado: true });
+
+  async function carregar() {
+    setCarregando(true);
+    const tamanho = 1000; let inicio = 0, todas = [], erroMsg = "";
+    for (;;) {
+      const { data, error } = await supabase.from("extrato_bancario").select("*")
+        .order("data", { ascending: false }).range(inicio, inicio + tamanho - 1);
+      if (error) { erroMsg = error.message; break; }
+      todas = todas.concat(data || []);
+      if (!data || data.length < tamanho) break;
+      inicio += tamanho; if (inicio > 200000) break;
+    }
+    if (erroMsg) setErro(erroMsg); else { setExtrato(todas); setErro(""); }
+    setCarregando(false);
+  }
+  useEffect(() => { carregar(); }, []);
+
+  async function importarArquivos(fileList) {
+    if (!fileList || !fileList.length) return;
+    setImportando(true); setMsg(""); setErro("");
+    try {
+      const existentes = new Set(extrato.map((l) => l.id));
+      let novos = [], repetidos = 0;
+      for (const file of fileList) {
+        const texto = await file.text();
+        const ehOFX = /<OFX|OFXHEADER/i.test(texto) || /\.ofx$/i.test(file.name);
+        const parsed = ehOFX ? parseOFX(texto) : parseCSVExtrato(texto);
+        const conta = (parsed.conta || contaManual || "").trim();
+        const linhas = parsed.transacoes.map((t) => ({
+          id: linhaId(banco, conta, t), banco, conta, data: t.data,
+          descricao: t.descricao || "", valor: t.valor, fitid: t.fitid || "",
+          saldo: null, conciliado: false, categoria: "", vinculo_tipo: "", vinculo_id: "", obs: "", origem: "import",
+        }));
+        // âncora de saldo (LEDGERBAL do OFX) na linha da data de referência, ou na mais recente
+        if (ehOFX && parsed.saldo != null && linhas.length) {
+          let alvo = linhas.find((l) => l.data === parsed.dataSaldo);
+          if (!alvo) alvo = linhas.reduce((a, b) => (a.data >= b.data ? a : b));
+          alvo.saldo = parsed.saldo;
+        }
+        for (const l of linhas) {
+          if (existentes.has(l.id)) { repetidos++; continue; }
+          existentes.add(l.id); novos.push(l);
+        }
+      }
+      if (novos.length) {
+        // grava em blocos de 500
+        for (let i = 0; i < novos.length; i += 500) {
+          const { error } = await supabase.from("extrato_bancario")
+            .upsert(novos.slice(i, i + 500), { onConflict: "id", ignoreDuplicates: true });
+          if (error) throw error;
+        }
+      }
+      await carregar();
+      setMsg(`${novos.length} linha(s) importada(s)` + (repetidos ? ` · ${repetidos} já existiam (ignoradas)` : "") + (novos.length && !novos.some((l) => l.conta) ? " · dica: informe o número da conta antes de importar CSV sem conta" : ""));
+    } catch (e) {
+      setErro("Não consegui importar: " + (e.message || e) + ". Confira se é um extrato OFX/CSV do banco e se a tabela extrato_bancario já foi criada no Supabase.");
+    }
+    setImportando(false);
+  }
+
+  async function atualizarLinha(id, patch) {
+    setExtrato((arr) => arr.map((l) => (l.id === id ? { ...l, ...patch } : l)));
+    const { error } = await supabase.from("extrato_bancario").update(patch).eq("id", id);
+    if (error) { setErro("Erro ao salvar: " + error.message); await carregar(); }
+  }
+  async function excluirLinha(id) {
+    setExtrato((arr) => arr.filter((l) => l.id !== id));
+    const { error } = await supabase.from("extrato_bancario").delete().eq("id", id);
+    if (error) { setErro("Erro ao excluir: " + error.message); await carregar(); }
+  }
+
+  const vendasConc = useMemo(() => (vendas || []).map((v) => ({
+    id: v.id, recebimento: v.recebimento, __liquido: lucroVenda(v).liquido, sku: v.sku || v.chave,
+  })), [vendas]);
+  const categoriasUsadas = useMemo(() => Array.from(new Set([
+    ...extrato.map((l) => l.categoria).filter(Boolean),
+    ...(financeiro || []).map((l) => l.categoria).filter(Boolean),
+    "Receita de vendas", "Outras receitas", "CMV (custo das mercadorias)", "Despesa operacional", "Impostos e taxas", "Pró-labore / salários", "Tarifas bancárias",
+  ])), [extrato, financeiro]);
+
+  // saldo diário por conta
+  const inicialSaldo = useMemo(() => ancoraSaldo(extrato), [extrato]);
+  const serieSaldo = useMemo(() => saldoDiario(extrato, inicialSaldo), [extrato, inicialSaldo]);
+  const contas = Object.keys(serieSaldo);
+  const saldoConsolidado = contas.reduce((s, k) => { const arr = serieSaldo[k]; return s + (arr.length ? arr[arr.length - 1].saldo : 0); }, 0);
+
+  const pendentes = extrato.filter((l) => !l.conciliado).length;
+  const extratoView = soPendentes ? extrato.filter((l) => !l.conciliado) : extrato;
+
+  // movimentos para o DRE: extrato categorizado + lançamentos não vinculados (opcional)
+  const movimentosDre = useMemo(() => {
+    const vinculadosLanc = new Set(extrato.filter((l) => l.vinculo_tipo === "lancamento" && l.vinculo_id).map((l) => l.vinculo_id));
+    const doExtrato = extrato.map((l) => ({ data: l.data, valor: num(l.valor), categoria: l.categoria }));
+    if (!incluirLanc) return doExtrato;
+    const doLanc = (financeiro || []).filter((l) => !vinculadosLanc.has(l.id))
+      .map((l) => ({ data: l.data, valor: l.tipo === "entrada" ? num(l.valor) : -num(l.valor), categoria: l.categoria }));
+    return [...doExtrato, ...doLanc];
+  }, [extrato, financeiro, incluirLanc]);
+  const dre = useMemo(() => agregarDRE(movimentosDre, mesDre), [movimentosDre, mesDre]);
+
+  async function baixarDreExcel() {
+    const XLSX = await import("xlsx");
+    const resumo = dre.linhas.map((c) => ({
+      Categoria: c.categoria,
+      "Entradas (R$)": Math.round(c.entradas * 100) / 100,
+      "Saídas (R$)": Math.round(c.saidas * 100) / 100,
+      "Saldo (R$)": Math.round(c.saldo * 100) / 100,
+    }));
+    resumo.push({ Categoria: "TOTAL", "Entradas (R$)": Math.round(dre.total.entradas * 100) / 100, "Saídas (R$)": Math.round(dre.total.saidas * 100) / 100, "Saldo (R$)": Math.round(dre.total.saldo * 100) / 100 });
+    const detalhe = movimentosDre.filter((m) => String(m.data || "").slice(0, 7) === mesDre)
+      .sort((a, b) => String(a.data).localeCompare(String(b.data)))
+      .map((m) => {
+        const linhaExt = extrato.find((l) => l.data === m.data && num(l.valor) === num(m.valor) && l.categoria === m.categoria);
+        const row = { Data: m.data };
+        if (colsDre.banco) row["Banco"] = linhaExt ? linhaExt.banco : "(lançamento)";
+        if (colsDre.conta) row["Conta"] = linhaExt ? linhaExt.conta : "";
+        if (colsDre.descricao) row["Descrição"] = linhaExt ? linhaExt.descricao : "";
+        if (colsDre.categoria) row["Categoria"] = m.categoria || "(sem categoria)";
+        if (colsDre.tipo) row["Tipo"] = num(m.valor) >= 0 ? "Entrada" : "Saída";
+        row["Valor (R$)"] = Math.round(num(m.valor) * 100) / 100;
+        if (colsDre.conciliado) row["Conciliado"] = linhaExt ? (linhaExt.conciliado ? "Sim" : "Não") : "—";
+        return row;
+      });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumo), "Resumo DRE");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalhe), "Detalhe");
+    XLSX.writeFile(wb, `dre-${mesDre}.xlsx`);
+  }
+
+  // ---- Resumo (visão original, preservada) ----
+  const hoje = hojeISO();
+  const mesAtual = hoje.slice(0, 7);
+  const soma = (arr, f) => arr.reduce((s, x) => s + f(x), 0);
+  const entradasMes = soma(financeiro.filter((l) => l.tipo === "entrada" && (l.data || "").slice(0, 7) === mesAtual), (l) => num(l.valor));
+  const saidasMes = soma(financeiro.filter((l) => l.tipo === "saida" && (l.data || "").slice(0, 7) === mesAtual), (l) => num(l.valor));
+  const recebidoVendasMes = soma((vendas || []).filter((v) => v.recebimento <= hoje && (v.recebimento || "").slice(0, 7) === mesAtual), (v) => lucroVenda(v).liquido);
+  const aReceber = soma((vendas || []).filter((v) => v.recebimento > hoje), (v) => lucroVenda(v).liquido);
+  const saldoGeral = soma(financeiro.filter((l) => l.tipo === "entrada"), (l) => num(l.valor))
+    - soma(financeiro.filter((l) => l.tipo === "saida"), (l) => num(l.valor))
+    + soma((vendas || []).filter((v) => v.recebimento <= hoje), (v) => lucroVenda(v).liquido);
+
+  const abas = [["resumo", "Resumo"], ["extrato", "Extrato & Conciliação"], ["dre", "Relatório DRE"]];
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap gap-2">
+        {abas.map(([k, rot]) => (
+          <button key={k} onClick={() => setSub(k)} className="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            style={sub === k ? { background: "#1F2937", color: "#F4F5F7" } : { background: "#F1F5F9", color: "#475569" }}>
+            {rot}{k === "extrato" && pendentes ? ` (${pendentes})` : ""}
+          </button>
+        ))}
+        {sub !== "resumo" && (
+          <button onClick={carregar} className="px-3 py-2 rounded-lg border text-sm ml-auto" style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>Atualizar</button>
+        )}
+      </div>
+      {erro && <p className="text-sm" style={{ color: "#DC2626" }}>Erro: {erro}</p>}
+
+      {sub === "resumo" && (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {[["Entradas do mês (manuais)", entradasMes, "#1F2937"], ["Vendas recebidas no mês", recebidoVendasMes, "#1F2937"], ["Saídas do mês", saidasMes, "#A33B2E"], ["A receber de vendas", aReceber, "#92400E"]].map(([l, v, c]) => (
+              <div key={l} className="bg-white rounded-2xl p-4 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
+                <p className="text-xs" style={{ color: "#6B7280" }}>{l}</p>
+                <p className="text-xl font-bold" style={{ color: c }}>{BRL(v)}</p>
+              </div>
+            ))}
+          </div>
+          <div className="rounded-2xl p-4 shadow-sm" style={{ background: "#1F2937" }}>
+            <p className="text-xs" style={{ color: "#9CA3AF" }}>Saldo geral (entradas manuais + vendas recebidas − saídas)</p>
+            <p className="text-2xl font-bold" style={{ color: "#F0C05A" }}>{BRL(saldoGeral)}</p>
+          </div>
+          <LancamentoForm onSave={addLancamento} categorias={categoriasUsadas} />
+          <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E5E7EB" }}>
+            <table className="w-full text-sm min-w-[560px]">
+              <thead><tr style={{ background: "#EEF2F7", color: "#374151" }}>{["Data", "Descrição", "Categoria", "Tipo", "Valor", ""].map((h) => <th key={h} className="text-left px-3 py-3 font-semibold">{h}</th>)}</tr></thead>
+              <tbody>
+                {financeiro.slice(0, 100).map((l) => (
+                  <tr key={l.id} className="border-t" style={{ borderColor: "#EFE9DC" }}>
+                    <td className="px-3 py-2 whitespace-nowrap">{fmtData(l.data)}</td>
+                    <td className="px-3 py-2">{l.descricao}</td>
+                    <td className="px-3 py-2" style={{ color: "#6B7280" }}>{l.categoria || "—"}</td>
+                    <td className="px-3 py-2"><span className="text-xs px-2 py-0.5 rounded-full" style={l.tipo === "entrada" ? { background: "#EEF2F7", color: "#374151" } : { background: "#FBE7E3", color: "#A33B2E" }}>{l.tipo === "entrada" ? "Entrada" : "Saída"}</span></td>
+                    <td className="px-3 py-2 font-semibold" style={{ color: l.tipo === "entrada" ? "#1F2937" : "#A33B2E" }}>{l.tipo === "saida" ? "− " : "+ "}{BRL(num(l.valor))}</td>
+                    <td className="px-3 py-2"><button className="text-lg" style={{ color: "#A33B2E" }} aria-label="Excluir" onClick={() => delLancamento(l.id)}>×</button></td>
+                  </tr>
+                ))}
+                {!financeiro.length && <tr><td colSpan={6} className="px-4 py-8 text-center" style={{ color: "#6B7280" }}>Nenhum lançamento. Registre entradas e saídas acima.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {sub === "extrato" && (
+        <>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
+            <h3 className="font-semibold mb-1">Importar extrato do banco</h3>
+            <p className="text-xs mb-3" style={{ color: "#6B7280" }}>Baixe o extrato em <strong>OFX</strong> (recomendado) ou CSV no app/internet banking (Santander e Sicoob exportam os dois) e solte o arquivo aqui. Linhas repetidas são ignoradas automaticamente.</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 items-end">
+              <Field label="Banco">
+                <select className={inputCls} style={inputStyle} value={banco} onChange={(e) => setBanco(e.target.value)}>
+                  {["Santander", "Sicoob", "Inter", "Nubank", "Outro"].map((b) => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </Field>
+              <Field label="Conta (opcional p/ CSV)"><input className={inputCls} style={inputStyle} value={contaManual} placeholder="ex.: ag 1234 / cc 56789" onChange={(e) => setContaManual(e.target.value)} /></Field>
+              <div className="col-span-2">
+                <label className="text-xs" style={{ color: "#6B7280" }}>Arquivo(s) OFX/CSV
+                  <input type="file" accept=".ofx,.csv,.txt" multiple disabled={importando} onChange={(e) => importarArquivos(e.target.files)}
+                    className="block w-full text-sm mt-1 file:mr-3 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-slate-700 file:text-white file:cursor-pointer" style={{ color: "#6B7280" }} />
+                </label>
+              </div>
+            </div>
+            {importando && <p className="text-sm mt-3" style={{ color: "#2563EB" }}>Importando…</p>}
+            {msg && <p className="text-sm mt-3" style={{ color: "#16A34A" }}>{msg}</p>}
+          </div>
+
+          {contas.length > 0 && (
+            <div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="rounded-2xl p-4 shadow-sm" style={{ background: "#1F2937" }}>
+                  <p className="text-xs" style={{ color: "#9CA3AF" }}>Saldo consolidado (todas as contas)</p>
+                  <p className="text-2xl font-bold" style={{ color: "#F0C05A" }}>{BRL(saldoConsolidado)}</p>
+                </div>
+                {contas.map((k) => {
+                  const arr = serieSaldo[k]; const ult = arr[arr.length - 1];
+                  const [bk, ct] = k.split("|");
+                  return (
+                    <div key={k} className="bg-white rounded-2xl p-4 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
+                      <p className="text-xs" style={{ color: "#6B7280" }}>{bk}{ct ? " · " + ct : ""}</p>
+                      <p className="text-xl font-bold" style={{ color: ult.saldo >= 0 ? "#16A34A" : "#DC2626" }}>{BRL(ult.saldo)}</p>
+                      <p className="text-xs mt-1" style={{ color: "#9CA3AF" }}>saldo em {fmtData(ult.data)}</p>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs mt-2" style={{ color: "#9CA3AF" }}>O saldo diário é ancorado no saldo que o próprio banco informa no OFX, então bate com o extrato. Em CSV sem saldo, a série é relativa (começa do zero).</p>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <h3 className="font-semibold">Conciliação {pendentes ? <span className="text-xs font-normal" style={{ color: "#A33B2E" }}>· {pendentes} pendente(s)</span> : <span className="text-xs font-normal" style={{ color: "#16A34A" }}>· tudo conferido</span>}</h3>
+            <label className="text-xs flex items-center gap-1.5 ml-auto cursor-pointer select-none" style={{ color: "#6B7280" }}>
+              <input type="checkbox" checked={soPendentes} onChange={(e) => setSoPendentes(e.target.checked)} /> Mostrar só pendentes
+            </label>
+          </div>
+          <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E5E7EB" }}>
+            <table className="w-full text-sm min-w-[820px]">
+              <thead><tr style={{ background: "#EEF2F7", color: "#374151" }}>{["Data", "Banco/Conta", "Descrição", "Valor", "Categoria (DRE)", "Sugestão", "Conferido", ""].map((h) => <th key={h} className="text-left px-3 py-3 font-semibold">{h}</th>)}</tr></thead>
+              <tbody>
+                {carregando && <tr><td colSpan={8} className="px-4 py-8 text-center" style={{ color: "#6B7280" }}>Carregando…</td></tr>}
+                {!carregando && extratoView.slice(0, 300).map((l) => {
+                  const sug = l.conciliado ? null : sugerirConciliacao(l, financeiro, vendasConc);
+                  return (
+                    <tr key={l.id} className="border-t" style={{ borderColor: "#EFE9DC", background: l.conciliado ? "#F6FBF7" : "transparent" }}>
+                      <td className="px-3 py-2 whitespace-nowrap">{fmtData(l.data)}</td>
+                      <td className="px-3 py-2 text-xs" style={{ color: "#6B7280" }}>{l.banco}{l.conta ? <><br />{l.conta}</> : ""}</td>
+                      <td className="px-3 py-2" style={{ maxWidth: 240 }}>{l.descricao || "—"}</td>
+                      <td className="px-3 py-2 font-semibold whitespace-nowrap" style={{ color: num(l.valor) >= 0 ? "#16A34A" : "#A33B2E" }}>{num(l.valor) >= 0 ? "+ " : "− "}{BRL(Math.abs(num(l.valor)))}</td>
+                      <td className="px-3 py-2">
+                        <input className={inputCls} style={inputStyle} list="cats-dre" defaultValue={l.categoria || ""} placeholder="categoria…"
+                          onBlur={(e) => { if (e.target.value !== l.categoria) atualizarLinha(l.id, { categoria: e.target.value }); }} />
+                      </td>
+                      <td className="px-3 py-2 text-xs" style={{ color: "#6B7280" }}>
+                        {sug ? <button className="underline" style={{ color: "#2563EB" }} onClick={() => atualizarLinha(l.id, { conciliado: true, vinculo_tipo: sug.tipo, vinculo_id: sug.id, categoria: l.categoria || (sug.tipo === "venda" ? "Receita de vendas" : "") })}>usar: {sug.rotulo}</button>
+                          : (l.vinculo_tipo ? <span style={{ color: "#16A34A" }}>✓ {l.vinculo_tipo}</span> : "—")}
+                      </td>
+                      <td className="px-3 py-2">
+                        <input type="checkbox" checked={!!l.conciliado} onChange={(e) => atualizarLinha(l.id, { conciliado: e.target.checked, ...(e.target.checked ? {} : { vinculo_tipo: "", vinculo_id: "" }) })} />
+                      </td>
+                      <td className="px-3 py-2"><button className="text-lg" style={{ color: "#A33B2E" }} aria-label="Excluir" onClick={() => excluirLinha(l.id)}>×</button></td>
+                    </tr>
+                  );
+                })}
+                {!carregando && !extratoView.length && <tr><td colSpan={8} className="px-4 py-8 text-center" style={{ color: "#6B7280" }}>{soPendentes ? "Nada pendente — tudo conferido. 🎉" : "Nenhuma linha de extrato ainda. Importe um OFX/CSV acima."}</td></tr>}
+              </tbody>
+            </table>
+          </div>
+          <datalist id="cats-dre">{categoriasUsadas.map((c) => <option key={c} value={c} />)}</datalist>
+        </>
+      )}
+
+      {sub === "dre" && (
+        <>
+          <div className="bg-white rounded-2xl p-5 shadow-sm border" style={{ borderColor: "#E5E7EB" }}>
+            <div className="flex flex-wrap gap-3 items-end">
+              <Field label="Mês de referência"><input type="month" className={inputCls} style={inputStyle} value={mesDre} onChange={(e) => setMesDre(e.target.value)} /></Field>
+              <label className="text-xs flex items-center gap-1.5 cursor-pointer select-none px-2 py-2 rounded-lg border" style={{ ...inputStyle, color: "#6B7280" }}>
+                <input type="checkbox" checked={incluirLanc} onChange={(e) => setIncluirLanc(e.target.checked)} /> incluir lançamentos manuais não conciliados
+              </label>
+              <button onClick={baixarDreExcel} disabled={!dre.qtd} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40" style={{ background: "#16A34A" }}>Baixar Excel (DRE)</button>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-3 text-xs" style={{ color: "#6B7280" }}>
+              <span>Colunas do detalhe:</span>
+              {Object.entries({ banco: "Banco", conta: "Conta", descricao: "Descrição", categoria: "Categoria", tipo: "Tipo", conciliado: "Conciliado" }).map(([k, rot]) => (
+                <label key={k} className="flex items-center gap-1 cursor-pointer select-none"><input type="checkbox" checked={colsDre[k]} onChange={(e) => setColsDre((c) => ({ ...c, [k]: e.target.checked }))} /> {rot}</label>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="bg-white rounded-2xl p-4 shadow-sm border" style={{ borderColor: "#E5E7EB" }}><p className="text-xs" style={{ color: "#6B7280" }}>Entradas do mês</p><p className="text-xl font-bold" style={{ color: "#16A34A" }}>{BRL(dre.total.entradas)}</p></div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm border" style={{ borderColor: "#E5E7EB" }}><p className="text-xs" style={{ color: "#6B7280" }}>Saídas do mês</p><p className="text-xl font-bold" style={{ color: "#A33B2E" }}>{BRL(dre.total.saidas)}</p></div>
+            <div className="bg-white rounded-2xl p-4 shadow-sm border" style={{ borderColor: "#E5E7EB" }}><p className="text-xs" style={{ color: "#6B7280" }}>Resultado (entradas − saídas)</p><p className="text-xl font-bold" style={{ color: dre.total.saldo >= 0 ? "#16A34A" : "#DC2626" }}>{BRL(dre.total.saldo)}</p></div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E5E7EB" }}>
+            <table className="w-full text-sm min-w-[520px]">
+              <thead><tr style={{ background: "#EEF2F7", color: "#374151" }}>{["Categoria", "Entradas", "Saídas", "Saldo"].map((h) => <th key={h} className={"px-3 py-3 font-semibold " + (h === "Categoria" ? "text-left" : "text-right")}>{h}</th>)}</tr></thead>
+              <tbody>
+                {dre.linhas.map((c) => (
+                  <tr key={c.categoria} className="border-t" style={{ borderColor: "#EFE9DC" }}>
+                    <td className="px-3 py-2">{c.categoria}</td>
+                    <td className="px-3 py-2 text-right" style={{ color: "#16A34A" }}>{c.entradas ? BRL(c.entradas) : "—"}</td>
+                    <td className="px-3 py-2 text-right" style={{ color: "#A33B2E" }}>{c.saidas ? BRL(c.saidas) : "—"}</td>
+                    <td className="px-3 py-2 text-right font-semibold" style={{ color: c.saldo >= 0 ? "#1F2937" : "#DC2626" }}>{BRL(c.saldo)}</td>
+                  </tr>
+                ))}
+                {!dre.qtd && <tr><td colSpan={4} className="px-4 py-8 text-center" style={{ color: "#6B7280" }}>Sem movimentos categorizados neste mês. Categorize as linhas na aba “Extrato & Conciliação”.</td></tr>}
+                {dre.qtd > 0 && (
+                  <tr className="border-t-2" style={{ borderColor: "#D8D0BF", background: "#FAFAF7" }}>
+                    <td className="px-3 py-2 font-bold">TOTAL</td>
+                    <td className="px-3 py-2 text-right font-bold" style={{ color: "#16A34A" }}>{BRL(dre.total.entradas)}</td>
+                    <td className="px-3 py-2 text-right font-bold" style={{ color: "#A33B2E" }}>{BRL(dre.total.saidas)}</td>
+                    <td className="px-3 py-2 text-right font-bold" style={{ color: dre.total.saldo >= 0 ? "#1F2937" : "#DC2626" }}>{BRL(dre.total.saldo)}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs" style={{ color: "#9CA3AF" }}>O relatório soma os movimentos reais do banco (extrato) por categoria — regime de caixa, ideal para preencher o DRE. Cada categoria vira uma linha; o financeiro escolhe as colunas do detalhe e exporta em Excel.</p>
+        </>
+      )}
+    </div>
+  );
+}
+
+function LancamentoForm({ onSave, categorias }) {
   const [f, setF] = useState({ data: hojeISO(), descricao: "", categoria: "", tipo: "saida", valor: "" });
   const ok = f.descricao.trim() && num(f.valor) > 0;
   return (
@@ -1911,7 +2359,7 @@ function LancamentoForm({ onSave }) {
         <div className="col-span-2">
           <Field label="Descrição"><input className={inputCls} style={inputStyle} value={f.descricao} placeholder="Ex.: Compra de MDF, conta de luz…" onChange={(e) => setF({ ...f, descricao: e.target.value })} /></Field>
         </div>
-        <Field label="Categoria"><input className={inputCls} style={inputStyle} value={f.categoria} placeholder="opcional" onChange={(e) => setF({ ...f, categoria: e.target.value })} /></Field>
+        <Field label="Categoria"><input className={inputCls} style={inputStyle} list="cats-lanc" value={f.categoria} placeholder="opcional" onChange={(e) => setF({ ...f, categoria: e.target.value })} /><datalist id="cats-lanc">{(categorias || []).map((c) => <option key={c} value={c} />)}</datalist></Field>
         <Field label="Tipo">
           <select className={inputCls} style={inputStyle} value={f.tipo} onChange={(e) => setF({ ...f, tipo: e.target.value })}>
             <option value="entrada">Entrada</option>
