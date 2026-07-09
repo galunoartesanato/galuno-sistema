@@ -821,16 +821,20 @@ export default function App() {
   const [setor, setSetor] = useState(null);
   useEffect(() => {
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      const email = (u?.user?.email || "").toLowerCase();
-      let sx = email === "gabriel.noris1@gmail.com" ? "dono" : "restrito";
-      if (email) {
-        try {
-          const { data: pf } = await supabase.from("perfis").select("setor").eq("email", email).maybeSingle();
-          if (pf && pf.setor) sx = pf.setor;
-        } catch (_e) { /* tabela pode nao existir ainda */ }
+      try {
+        const { data: u } = await supabase.auth.getUser();
+        const email = (u?.user?.email || "").toLowerCase();
+        let sx = email === "gabriel.noris1@gmail.com" ? "dono" : "restrito";
+        if (email) {
+          try {
+            const { data: pf } = await supabase.from("perfis").select("setor").eq("email", email).maybeSingle();
+            if (pf && pf.setor) sx = pf.setor;
+          } catch (_e) { /* tabela pode nao existir ainda */ }
+        }
+        setSetor(sx);
+      } catch (_e) {
+        setSetor("restrito"); // em caso de falha, começa restrito (nunca abre demais)
       }
-      setSetor(sx);
     })();
   }, []);
   useEffect(() => {
@@ -862,7 +866,9 @@ export default function App() {
     return () => clearTimeout(t);
   }, [data]);
 
-  if (!data)
+  // Só desenha a interface depois que os dados E o setor estão prontos —
+  // assim nenhuma aba "pisca" antes de a permissão da pessoa ser aplicada.
+  if (!data || setor === null)
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: "#F4F5F7" }}>
         <p style={{ color: "#6B7280" }}>Carregando seus dados…</p>
