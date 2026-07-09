@@ -408,13 +408,26 @@ function parseOFX(texto) {
     const valor = valorOFX(tagOFX(b, "TRNAMT"));
     const fitid = tagOFX(b, "FITID");
     const memo = tagOFX(b, "MEMO");
-    const nome = tagOFX(b, "NAME");
+    let nome = tagOFX(b, "NAME");
+    // alguns bancos trazem o favorecido/pagador num bloco estruturado <PAYEE><NAME>…</NAME>
+    const payee = (b.match(/<PAYEE>[\s\S]*?<\/PAYEE>/i) || [])[0];
+    if (payee) { const pn = tagOFX(payee, "NAME"); if (pn) nome = pn; }
     const trntype = tagOFX(b, "TRNTYPE");
+    // "quem recebeu/pagou" fica em NAME; guardamos ele na frente, separado do memo por " — "
     const descricao = [nome, memo].filter(Boolean).join(" — ") || trntype || "";
     if (!data && !valor) continue;
-    transacoes.push({ data, valor, fitid, descricao, tipo: valor >= 0 ? "credito" : "debito" });
+    transacoes.push({ data, valor, fitid, descricao, contraparte: nome || "", tipo: valor >= 0 ? "credito" : "debito" });
   }
   return { conta: conta || "", saldo: saldo ? valorOFX(saldo) : null, dataSaldo: dataOFX(dtSaldo), transacoes };
+}
+// Extrai "quem recebeu/pagou" (a contraparte) do texto do extrato. Como o parser
+// junta o favorecido (NAME) e o histórico (MEMO) com " — ", o favorecido é o
+// trecho antes do " — ". Funciona também para linhas já importadas antes.
+function quemRecebeu(texto) {
+  const t = String(texto || "").trim();
+  if (!t) return "";
+  if (t.includes(" — ")) return t.split(" — ")[0].trim();
+  return t;
 }
 function splitCSVLinha(linha, sep) {
   const out = []; let cur = "", dentro = false;
@@ -2135,7 +2148,7 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
         const row = { Data: m.data };
         if (colsDre.banco) row["Banco"] = linhaExt ? linhaExt.banco : "(lançamento)";
         if (colsDre.conta) row["Conta"] = linhaExt ? linhaExt.conta : "";
-        if (colsDre.descricao) row["Descrição"] = linhaExt ? linhaExt.descricao : "";
+        if (colsDre.descricao) row["Quem recebeu / origem"] = linhaExt ? quemRecebeu(linhaExt.descricao) : "";
         if (colsDre.categoria) row["Categoria"] = m.categoria || "(sem categoria)";
         if (colsDre.tipo) row["Tipo"] = num(m.valor) >= 0 ? "Entrada" : "Saída";
         row["Valor (R$)"] = Math.round(num(m.valor) * 100) / 100;
@@ -2280,7 +2293,7 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
           </div>
           <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E5E7EB" }}>
             <table className="w-full text-sm min-w-[820px]">
-              <thead><tr style={{ background: "#EEF2F7", color: "#374151" }}>{["Data", "Banco/Conta", "Descrição", "Valor", "Categoria (DRE)", "Sugestão", "Conferido", ""].map((h) => <th key={h} className="text-left px-3 py-3 font-semibold">{h}</th>)}</tr></thead>
+              <thead><tr style={{ background: "#EEF2F7", color: "#374151" }}>{["Data", "Banco/Conta", "Quem recebeu / origem", "Valor", "Categoria (DRE)", "Sugestão", "Conferido", ""].map((h) => <th key={h} className="text-left px-3 py-3 font-semibold">{h}</th>)}</tr></thead>
               <tbody>
                 {carregando && <tr><td colSpan={8} className="px-4 py-8 text-center" style={{ color: "#6B7280" }}>Carregando…</td></tr>}
                 {!carregando && extratoView.slice(0, 300).map((l) => {
@@ -2289,7 +2302,7 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
                     <tr key={l.id} className="border-t" style={{ borderColor: "#EFE9DC", background: l.conciliado ? "#F6FBF7" : "transparent" }}>
                       <td className="px-3 py-2 whitespace-nowrap">{fmtData(l.data)}</td>
                       <td className="px-3 py-2 text-xs" style={{ color: "#6B7280" }}>{l.banco}{l.conta ? <><br />{l.conta}</> : ""}</td>
-                      <td className="px-3 py-2" style={{ maxWidth: 240 }}>{l.descricao || "—"}</td>
+                      <td className="px-3 py-2" style={{ maxWidth: 240 }} title={l.descricao || ""}>{quemRecebeu(l.descricao) || "—"}</td>
                       <td className="px-3 py-2 font-semibold whitespace-nowrap" style={{ color: num(l.valor) >= 0 ? "#16A34A" : "#A33B2E" }}>{num(l.valor) >= 0 ? "+ " : "− "}{BRL(Math.abs(num(l.valor)))}</td>
                       <td className="px-3 py-2">
                         <input className={inputCls} style={inputStyle} list="cats-dre" defaultValue={l.categoria || ""} placeholder="categoria…"
@@ -2332,7 +2345,7 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
             </div>
             <div className="mt-3 flex flex-wrap gap-3 text-xs" style={{ color: "#6B7280" }}>
               <span>Colunas do detalhe:</span>
-              {Object.entries({ banco: "Banco", conta: "Conta", descricao: "Descrição", categoria: "Categoria", tipo: "Tipo", conciliado: "Conciliado" }).map(([k, rot]) => (
+              {Object.entries({ banco: "Banco", conta: "Conta", descricao: "Quem recebeu", categoria: "Categoria", tipo: "Tipo", conciliado: "Conciliado" }).map(([k, rot]) => (
                 <label key={k} className="flex items-center gap-1 cursor-pointer select-none"><input type="checkbox" checked={colsDre[k]} onChange={(e) => setColsDre((c) => ({ ...c, [k]: e.target.checked }))} /> {rot}</label>
               ))}
             </div>
