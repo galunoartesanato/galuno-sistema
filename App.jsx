@@ -458,17 +458,23 @@ function normalizaDataBR(s) {
 function parseCSVExtrato(texto) {
   const linhas = String(texto || "").split(/\r?\n/).filter((l) => l.trim());
   if (!linhas.length) return { transacoes: [] };
-  const sep = (linhas[0].match(/;/g) || []).length >= (linhas[0].match(/,/g) || []).length ? ";" : ",";
+  // acha a linha de cabeçalho (pode haver preâmbulo/banner antes dela)
   let hIdx = 0;
-  for (let i = 0; i < Math.min(linhas.length, 15); i++) {
+  for (let i = 0; i < Math.min(linhas.length, 25); i++) {
     const low = linhas[i].toLowerCase();
-    if (low.includes("data") && (low.includes("valor") || low.includes("crédito") || low.includes("credito") || low.includes("débito") || low.includes("debito") || low.includes("hist"))) { hIdx = i; break; }
+    if (low.includes("data") && (low.includes("valor") || low.includes("crédito") || low.includes("credito") || low.includes("débito") || low.includes("debito") || low.includes("hist") || low.includes("lanç") || low.includes("lanc"))) { hIdx = i; break; }
   }
-  const header = splitCSVLinha(linhas[hIdx], sep).map((h) => h.toLowerCase());
+  // separador detectado na PRÓPRIA linha de cabeçalho: ";", "," ou tab
+  const linhaH = linhas[hIdx];
+  const cont = (ch) => (linhaH.split(ch).length - 1);
+  let sep = ";";
+  if (cont("\t") >= cont(";") && cont("\t") >= cont(",")) sep = "\t";
+  else if (cont(",") > cont(";")) sep = ",";
+  const header = splitCSVLinha(linhaH, sep).map((h) => h.toLowerCase());
   const acha = (...alts) => header.findIndex((h) => alts.some((a) => h.includes(a)));
-  const iData = acha("data"), iValor = acha("valor", "amount");
+  const iData = acha("data"), iValor = acha("valor", "amount", "montante");
   const iCred = acha("crédito", "credito", "entrada"), iDeb = acha("débito", "debito", "saída", "saida");
-  const iDesc = acha("histór", "histor", "descri", "lançamento", "lancamento", "memo"), iDoc = acha("documento", "docto", "id");
+  const iDesc = acha("histór", "histor", "descri", "lançamento", "lancamento", "memo", "movimenta", "detalhe", "transa"), iDoc = acha("documento", "docto", "identificador", "id");
   const transacoes = [];
   for (let i = hIdx + 1; i < linhas.length; i++) {
     const c = splitCSVLinha(linhas[i], sep);
@@ -488,6 +494,47 @@ function linhaId(banco, conta, t) {
     ? `${banco}:${conta}:${t.fitid}`
     : `${banco}:${conta}:${t.data}:${t.valor}:${hashCurto(t.descricao)}`;
   return base.replace(/\s+/g, "_");
+}
+// Lê o arquivo como texto tentando UTF-8 e caindo para ISO-8859-1 (Latin-1),
+// encoding comum em OFX/CSV de bancos brasileiros. Sem isso, acentos das
+// descrições saem trocados (ex.: "TRANSFERÊNCIA" vira "TRANSFERÃŠNCIA").
+async function lerTextoArquivo(file) {
+  const buf = await file.arrayBuffer();
+  const utf8 = new TextDecoder("utf-8", { fatal: false }).decode(buf);
+  if (utf8.includes("�")) {
+    try { return new TextDecoder("iso-8859-1").decode(buf); } catch (_e) { /* mantém utf8 */ }
+  }
+  return utf8;
+}
+// Insere as linhas do extrato tolerando colunas que ainda não existam na tabela.
+// Se o PostgREST reclamar de uma coluna ausente (ex.: 'empresa' antes da migração,
+// ou qualquer coluna nova no futuro), removemos essa coluna de todas as linhas e
+// tentamos de novo — em vez de a importação inteira falhar. Retorna as colunas
+// que precisaram ser removidas, para avisar o usuário. Grava em blocos de 500.
+async function upsertExtrato(rows) {
+  let atual = rows;
+  const removidas = [];
+  for (let tentativa = 0; tentativa < 10; tentativa++) {
+    let erro = null;
+    for (let i = 0; i < atual.length; i += 500) {
+      const { error } = await supabase.from("extrato_bancario")
+        .upsert(atual.slice(i, i + 500), { onConflict: "id", ignoreDuplicates: true });
+      if (error) { erro = error; break; }
+    }
+    if (!erro) return { removidas };
+    const msg = String(erro.message || "");
+    const ehColunaAusente = erro.code === "PGRST204"
+      || /could not find the .* column|schema cache|column .* does not exist/i.test(msg);
+    const m = msg.match(/'([^']+)' column|column ['"]([^'"]+)['"]/i);
+    const col = m && (m[1] || m[2]);
+    if (col && ehColunaAusente && atual.some((r) => col in r)) {
+      removidas.push(col);
+      atual = atual.map((r) => { const nr = { ...r }; delete nr[col]; return nr; });
+      continue; // tenta de novo sem a coluna que o banco não tem
+    }
+    throw erro; // erro que não sabemos contornar sobe para a mensagem
+  }
+  throw new Error("Falha ao inserir mesmo após remover colunas ausentes (" + removidas.join(", ") + ").");
 }
 function ancoraSaldo(linhas) {
   const porConta = {};
@@ -2067,39 +2114,51 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
     try {
       const existentes = new Set(extrato.map((l) => l.id));
       let novos = [], repetidos = 0;
+      const falhas = [], vazios = [];
       for (const file of fileList) {
-        const texto = await file.text();
-        const ehOFX = /<OFX|OFXHEADER/i.test(texto) || /\.ofx$/i.test(file.name);
-        const parsed = ehOFX ? parseOFX(texto) : parseCSVExtrato(texto);
-        const conta = (parsed.conta || contaManual || "").trim();
-        const linhas = parsed.transacoes.map((t) => ({
-          id: linhaId(banco, conta, t), banco, conta, data: t.data,
-          descricao: t.descricao || "", valor: t.valor, fitid: t.fitid || "",
-          saldo: null, conciliado: false, categoria: "", empresa: "", vinculo_tipo: "", vinculo_id: "", obs: "", origem: "import",
-        }));
-        // âncora de saldo (LEDGERBAL do OFX) na linha da data de referência, ou na mais recente
-        if (ehOFX && parsed.saldo != null && linhas.length) {
-          let alvo = linhas.find((l) => l.data === parsed.dataSaldo);
-          if (!alvo) alvo = linhas.reduce((a, b) => (a.data >= b.data ? a : b));
-          alvo.saldo = parsed.saldo;
-        }
-        for (const l of linhas) {
-          if (existentes.has(l.id)) { repetidos++; continue; }
-          existentes.add(l.id); novos.push(l);
+        try {
+          const texto = await lerTextoArquivo(file);
+          const ehOFX = /<OFX|OFXHEADER/i.test(texto) || /\.ofx$/i.test(file.name);
+          const parsed = ehOFX ? parseOFX(texto) : parseCSVExtrato(texto);
+          const trans = (parsed && parsed.transacoes) || [];
+          if (!trans.length) { vazios.push(file.name); continue; }
+          const conta = (parsed.conta || contaManual || "").trim();
+          const linhas = trans.map((t) => ({
+            id: linhaId(banco, conta, t), banco, conta, data: t.data,
+            descricao: t.descricao || "", valor: t.valor, fitid: t.fitid || "",
+            saldo: null, conciliado: false, categoria: "", empresa: "", vinculo_tipo: "", vinculo_id: "", obs: "", origem: "import",
+          }));
+          // âncora de saldo (LEDGERBAL do OFX) na linha da data de referência, ou na mais recente
+          if (ehOFX && parsed.saldo != null && linhas.length) {
+            let alvo = linhas.find((l) => l.data === parsed.dataSaldo);
+            if (!alvo) alvo = linhas.reduce((a, b) => (a.data >= b.data ? a : b));
+            alvo.saldo = parsed.saldo;
+          }
+          for (const l of linhas) {
+            if (!l.data || !l.valor) continue;            // sem data ou valor não entra
+            if (existentes.has(l.id)) { repetidos++; continue; }
+            existentes.add(l.id); novos.push(l);
+          }
+        } catch (e) {
+          // um arquivo problemático não derruba a importação dos outros
+          falhas.push(`${file.name} (${e.message || e})`);
         }
       }
+      let removidas = [];
       if (novos.length) {
-        // grava em blocos de 500
-        for (let i = 0; i < novos.length; i += 500) {
-          const { error } = await supabase.from("extrato_bancario")
-            .upsert(novos.slice(i, i + 500), { onConflict: "id", ignoreDuplicates: true });
-          if (error) throw error;
-        }
+        const r = await upsertExtrato(novos);
+        removidas = [...new Set(r.removidas || [])];
       }
       await carregar();
-      setMsg(`${novos.length} linha(s) importada(s)` + (repetidos ? ` · ${repetidos} já existiam (ignoradas)` : "") + (novos.length && !novos.some((l) => l.conta) ? " · dica: informe o número da conta antes de importar CSV sem conta" : ""));
+      const partes = [`${novos.length} linha(s) importada(s)`];
+      if (repetidos) partes.push(`${repetidos} já existiam (ignoradas)`);
+      if (vazios.length) partes.push(`sem transações reconhecidas: ${vazios.join(", ")}`);
+      if (novos.length && !novos.some((l) => l.conta)) partes.push("dica: informe o número da conta antes de importar CSV sem conta");
+      if (removidas.length) partes.push(`aviso: a(s) coluna(s) ${removidas.join(", ")} ainda não existe(m) no banco — rode a migração para salvá-la(s)`);
+      setMsg(partes.join(" · "));
+      if (falhas.length) setErro("Alguns arquivos não puderam ser lidos: " + falhas.join(" | ") + ". Os demais foram importados normalmente.");
     } catch (e) {
-      setErro("Não consegui importar: " + (e.message || e) + ". Confira se é um extrato OFX/CSV do banco e se a tabela extrato_bancario já foi criada no Supabase.");
+      setErro("Não consegui importar: " + (e.message || e) + ". Confira se é um extrato OFX/CSV do banco e se a tabela extrato_bancario já existe no Supabase.");
     }
     setImportando(false);
   }
