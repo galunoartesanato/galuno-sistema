@@ -2039,6 +2039,7 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
   const [mesDre, setMesDre] = useState(hojeISO().slice(0, 7));
   const [incluirLanc, setIncluirLanc] = useState(true);
   const [colsDre, setColsDre] = useState({ banco: true, conta: true, descricao: true, categoria: true, tipo: true, conciliado: true });
+  const [empresaDre, setEmpresaDre] = useState("todas"); // "todas" (geral) | "LASER" | "ROUTER"
 
   async function carregar() {
     setCarregando(true);
@@ -2071,7 +2072,7 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
         const linhas = parsed.transacoes.map((t) => ({
           id: linhaId(banco, conta, t), banco, conta, data: t.data,
           descricao: t.descricao || "", valor: t.valor, fitid: t.fitid || "",
-          saldo: null, conciliado: false, categoria: "", vinculo_tipo: "", vinculo_id: "", obs: "", origem: "import",
+          saldo: null, conciliado: false, categoria: "", empresa: "", vinculo_tipo: "", vinculo_id: "", obs: "", origem: "import",
         }));
         // âncora de saldo (LEDGERBAL do OFX) na linha da data de referência, ou na mais recente
         if (ehOFX && parsed.saldo != null && linhas.length) {
@@ -2154,13 +2155,18 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
   // movimentos para o DRE: extrato categorizado (da conta filtrada) + lançamentos não vinculados (opcional)
   const movimentosDre = useMemo(() => {
     const vinculadosLanc = new Set(extratoFiltrado.filter((l) => l.vinculo_tipo === "lancamento" && l.vinculo_id).map((l) => l.vinculo_id));
-    const doExtrato = extratoFiltrado.map((l) => ({ data: l.data, valor: num(l.valor), categoria: l.categoria }));
-    // lançamentos manuais só entram quando NÃO há filtro de conta (não pertencem a uma conta específica)
-    if (!incluirLanc || contaFiltro !== "todas") return doExtrato;
+    // filtro por empresa: no DRE geral ("todas") entram todas as linhas; no de uma
+    // empresa entram só as linhas marcadas com aquela empresa (Ambas/Geral e em
+    // branco ficam só no geral).
+    const baseExtrato = empresaDre === "todas" ? extratoFiltrado : extratoFiltrado.filter((l) => (l.empresa || "") === empresaDre);
+    const doExtrato = baseExtrato.map((l) => ({ data: l.data, valor: num(l.valor), categoria: l.categoria }));
+    // lançamentos manuais só entram no DRE geral (sem filtro de conta e sem filtro
+    // de empresa — eles não pertencem a uma conta nem a uma empresa específica)
+    if (!incluirLanc || contaFiltro !== "todas" || empresaDre !== "todas") return doExtrato;
     const doLanc = (financeiro || []).filter((l) => !vinculadosLanc.has(l.id))
       .map((l) => ({ data: l.data, valor: l.tipo === "entrada" ? num(l.valor) : -num(l.valor), categoria: l.categoria }));
     return [...doExtrato, ...doLanc];
-  }, [extratoFiltrado, financeiro, incluirLanc, contaFiltro]);
+  }, [extratoFiltrado, financeiro, incluirLanc, contaFiltro, empresaDre]);
   const dre = useMemo(() => agregarDRE(movimentosDre, mesDre), [movimentosDre, mesDre]);
 
   async function baixarDreExcel() {
@@ -2190,7 +2196,8 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(resumo), "Resumo DRE");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(detalhe), "Detalhe");
     const sufConta = contaFiltro === "todas" ? "" : "_" + rotuloConta(contaFiltro).replace(/[^\w]+/g, "-");
-    XLSX.writeFile(wb, `dre-${mesDre}${sufConta}.xlsx`);
+    const sufEmpresa = empresaDre === "todas" ? "" : "_" + empresaDre;
+    XLSX.writeFile(wb, `dre-${mesDre}${sufEmpresa}${sufConta}.xlsx`);
   }
 
   // ---- Resumo (visão original, preservada) ----
@@ -2324,11 +2331,10 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
           </div>
           <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E5E7EB" }}>
             <table className="w-full text-sm min-w-[820px]">
-              <thead><tr style={{ background: "#EEF2F7", color: "#374151" }}>{["Data", "Banco/Conta", "Quem recebeu / origem", "Valor", "Categoria (DRE)", "Sugestão", "Conferido", ""].map((h) => <th key={h} className="text-left px-3 py-3 font-semibold">{h}</th>)}</tr></thead>
+              <thead><tr style={{ background: "#EEF2F7", color: "#374151" }}>{["Data", "Banco/Conta", "Quem recebeu / origem", "Valor", "Categoria (DRE)", "Empresa", "Conferido", ""].map((h) => <th key={h} className="text-left px-3 py-3 font-semibold">{h}</th>)}</tr></thead>
               <tbody>
                 {carregando && <tr><td colSpan={8} className="px-4 py-8 text-center" style={{ color: "#6B7280" }}>Carregando…</td></tr>}
                 {!carregando && extratoView.slice(0, 300).map((l) => {
-                  const sug = l.conciliado ? null : sugerirConciliacao(l, financeiro, vendasConc);
                   return (
                     <tr key={l.id} className="border-t" style={{ borderColor: "#EFE9DC", background: l.conciliado ? "#F6FBF7" : "transparent" }}>
                       <td className="px-3 py-2 whitespace-nowrap">{fmtData(l.data)}</td>
@@ -2339,9 +2345,14 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
                         <input className={inputCls} style={inputStyle} list="cats-dre" defaultValue={l.categoria || ""} placeholder="categoria…"
                           onBlur={(e) => { if (e.target.value !== l.categoria) atualizarLinha(l.id, { categoria: e.target.value }); }} />
                       </td>
-                      <td className="px-3 py-2 text-xs" style={{ color: "#6B7280" }}>
-                        {sug ? <button className="underline" style={{ color: "#2563EB" }} onClick={() => atualizarLinha(l.id, { conciliado: true, vinculo_tipo: sug.tipo, vinculo_id: sug.id, categoria: l.categoria || (sug.tipo === "venda" ? "Receita de vendas" : "") })}>usar: {sug.rotulo}</button>
-                          : (l.vinculo_tipo ? <span style={{ color: "#16A34A" }}>✓ {l.vinculo_tipo}</span> : "—")}
+                      <td className="px-3 py-2">
+                        <select className={inputCls} style={inputStyle} value={l.empresa || ""}
+                          onChange={(e) => atualizarLinha(l.id, { empresa: e.target.value })}>
+                          <option value="">—</option>
+                          <option value="LASER">LASER</option>
+                          <option value="ROUTER">ROUTER</option>
+                          <option value="AMBAS">Ambas / Geral</option>
+                        </select>
                       </td>
                       <td className="px-3 py-2">
                         <input type="checkbox" checked={!!l.conciliado} onChange={(e) => atualizarLinha(l.id, { conciliado: e.target.checked, ...(e.target.checked ? {} : { vinculo_tipo: "", vinculo_id: "" }) })} />
@@ -2390,8 +2401,15 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
                   {contasDisponiveis.map((k) => <option key={k} value={k}>{rotuloConta(k)}</option>)}
                 </select>
               </Field>
-              <label className="text-xs flex items-center gap-1.5 cursor-pointer select-none px-2 py-2 rounded-lg border" style={{ ...inputStyle, color: contaFiltro === "todas" ? "#6B7280" : "#B0B0B0" }} title={contaFiltro !== "todas" ? "Disponível apenas com todas as contas (lançamentos não pertencem a uma conta específica)" : ""}>
-                <input type="checkbox" checked={incluirLanc && contaFiltro === "todas"} disabled={contaFiltro !== "todas"} onChange={(e) => setIncluirLanc(e.target.checked)} /> incluir lançamentos manuais não conciliados
+              <Field label="Empresa">
+                <select className={inputCls} style={inputStyle} value={empresaDre} onChange={(e) => setEmpresaDre(e.target.value)}>
+                  <option value="todas">Geral (todas)</option>
+                  <option value="LASER">LASER</option>
+                  <option value="ROUTER">ROUTER</option>
+                </select>
+              </Field>
+              <label className="text-xs flex items-center gap-1.5 cursor-pointer select-none px-2 py-2 rounded-lg border" style={{ ...inputStyle, color: (contaFiltro === "todas" && empresaDre === "todas") ? "#6B7280" : "#B0B0B0" }} title={(contaFiltro !== "todas" || empresaDre !== "todas") ? "Disponível apenas no DRE geral (todas as contas e todas as empresas — lançamentos manuais não pertencem a uma conta ou empresa específica)" : ""}>
+                <input type="checkbox" checked={incluirLanc && contaFiltro === "todas" && empresaDre === "todas"} disabled={contaFiltro !== "todas" || empresaDre !== "todas"} onChange={(e) => setIncluirLanc(e.target.checked)} /> incluir lançamentos manuais não conciliados
               </label>
               <button onClick={baixarDreExcel} disabled={!dre.qtd} className="px-4 py-2 rounded-lg text-sm font-semibold text-white disabled:opacity-40" style={{ background: "#16A34A" }}>Baixar Excel (DRE)</button>
             </div>
@@ -2433,7 +2451,7 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
               </tbody>
             </table>
           </div>
-          <p className="text-xs" style={{ color: "#9CA3AF" }}>O relatório soma os movimentos reais do banco (extrato) por categoria — regime de caixa, ideal para preencher o DRE. Cada categoria vira uma linha; o financeiro escolhe as colunas do detalhe e exporta em Excel.</p>
+          <p className="text-xs" style={{ color: "#9CA3AF" }}>O relatório soma os movimentos reais do banco (extrato) por categoria — regime de caixa, ideal para preencher o DRE. Cada categoria vira uma linha; o financeiro escolhe as colunas do detalhe e exporta em Excel. {empresaDre === "todas" ? "Empresa: Geral (todas as linhas, incluindo as marcadas como Ambas/Geral)." : <>Empresa: <strong>{empresaDre}</strong> — só as linhas do extrato marcadas como {empresaDre} na conciliação. Linhas “Ambas/Geral” ou sem empresa aparecem só no Geral.</>}</p>
         </>
       )}
     </div>
