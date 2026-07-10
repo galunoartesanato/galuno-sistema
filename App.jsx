@@ -2034,6 +2034,9 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
   const [importando, setImportando] = useState(false);
   const [msg, setMsg] = useState("");
   const [soPendentes, setSoPendentes] = useState(false);
+  const [extDataIni, setExtDataIni] = useState(""); // período da conciliação
+  const [extDataFim, setExtDataFim] = useState("");
+  const [buscaExt, setBuscaExt] = useState("");     // busca livre na conciliação
   const [contaFiltro, setContaFiltro] = useState("todas");
   const [confirmarLimpar, setConfirmarLimpar] = useState(false);
   const [mesDre, setMesDre] = useState(hojeISO().slice(0, 7));
@@ -2150,7 +2153,20 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
   const saldoConsolidado = contas.reduce((s, k) => { const arr = serieSaldo[k]; return s + (arr.length ? arr[arr.length - 1].saldo : 0); }, 0);
 
   const pendentes = extratoFiltrado.filter((l) => !l.conciliado).length;
-  const extratoView = soPendentes ? extratoFiltrado.filter((l) => !l.conciliado) : extratoFiltrado;
+  const extratoView = useMemo(() => {
+    const q = buscaExt.trim().toLowerCase();
+    return extratoFiltrado.filter((l) => {
+      if (soPendentes && l.conciliado) return false;
+      if (extDataIni && String(l.data || "") < extDataIni) return false;
+      if (extDataFim && String(l.data || "") > extDataFim) return false;
+      if (q) {
+        const alvo = [l.descricao, l.categoria, l.empresa, l.obs, l.banco, l.conta]
+          .map((x) => String(x || "").toLowerCase()).join(" ");
+        if (!alvo.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [extratoFiltrado, soPendentes, extDataIni, extDataFim, buscaExt]);
 
   // movimentos para o DRE: extrato categorizado (da conta filtrada) + lançamentos não vinculados (opcional)
   const movimentosDre = useMemo(() => {
@@ -2328,6 +2344,21 @@ function FinanceiroPanel({ financeiro, vendas, addLancamento, delLancamento }) {
             <label className="text-xs flex items-center gap-1.5 ml-auto cursor-pointer select-none" style={{ color: "#6B7280" }}>
               <input type="checkbox" checked={soPendentes} onChange={(e) => setSoPendentes(e.target.checked)} /> Mostrar só pendentes
             </label>
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <label className="text-xs" style={{ color: "#6B7280" }}>De
+              <input type="date" value={extDataIni} onChange={(e) => setExtDataIni(e.target.value)} className={inputCls} style={{ ...inputStyle, width: "auto" }} />
+            </label>
+            <label className="text-xs" style={{ color: "#6B7280" }}>Até
+              <input type="date" value={extDataFim} onChange={(e) => setExtDataFim(e.target.value)} className={inputCls} style={{ ...inputStyle, width: "auto" }} />
+            </label>
+            <label className="text-xs flex-1 min-w-[200px]" style={{ color: "#6B7280" }}>Buscar
+              <input value={buscaExt} onChange={(e) => setBuscaExt(e.target.value)} placeholder="descrição, categoria, empresa, observação…" className={inputCls} style={inputStyle} />
+            </label>
+            <button onClick={() => { const ym = hojeISO().slice(0, 7); setExtDataIni(ym + "-01"); setExtDataFim(ym + "-31"); }} className="px-3 py-2 rounded-lg border text-sm" style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>Este mês</button>
+            <button onClick={() => { const [y, m] = hojeISO().slice(0, 7).split("-").map(Number); const d = new Date(y, m - 2, 1); const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`; setExtDataIni(ym + "-01"); setExtDataFim(ym + "-31"); }} className="px-3 py-2 rounded-lg border text-sm" style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>Mês passado</button>
+            <button onClick={() => { setExtDataIni(""); setExtDataFim(""); setBuscaExt(""); }} className="px-3 py-2 rounded-lg border text-sm" style={{ color: "#6B7280", borderColor: "#E5E7EB" }}>Limpar</button>
+            <span className="text-xs self-center" style={{ color: "#9CA3AF" }}>{extratoView.length} linha(s)</span>
           </div>
           <div className="bg-white rounded-2xl shadow-sm border overflow-x-auto" style={{ borderColor: "#E5E7EB" }}>
             <table className="w-full text-sm min-w-[1040px]">
